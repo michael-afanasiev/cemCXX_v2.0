@@ -19,3 +19,9 @@
 *.exe
 *.out
 *.app
+
+# Binaries
+./bin/*
+
+# Object files
+./obj/*
