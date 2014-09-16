@@ -1,5 +1,6 @@
-CXXFLAGS 	= -O3 -std=c++11
-CFLAGS   	= -O3
+CXXFLAGS = -O3 -std=c++11 -I/Users/michaelafanasiev/Development/include
+CFLAGS   = -O3
+LDFLAGS  = -L/Users/michaelafanasiev/Development/lib -lexodus -lnetcdf
 
 OBJECTS		= \
 	./obj/main.o \
