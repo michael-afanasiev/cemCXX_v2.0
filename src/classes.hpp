@@ -14,6 +14,16 @@ private:
 
 };
 
+class symmetry_system {
+
+private:
+  
+public:
+  
+  symmetry_system (std::string);
+
+};
+
 class exodus_file {
   
 private:

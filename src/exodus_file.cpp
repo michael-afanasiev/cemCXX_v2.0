@@ -33,7 +33,6 @@ exodus_file::~exodus_file () {
 void exodus_file::getConnectivity () {
   
   for (size_t i=0; i<numElemBlock; i++) {
-    std::cout << i << std::endl;
   }
   
 }
