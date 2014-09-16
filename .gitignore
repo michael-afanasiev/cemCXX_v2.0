@@ -25,3 +25,7 @@
 
 # Object files
 ./obj/*
+
+# Exodus files.
+*.e
+*.ex2

@@ -27,17 +27,37 @@ private:
   int idexo   = 0;
   int ier     = 0;
   
+  // misc. mesh details.
+  int numNodes;
+  int numElem;
+  int numElemBlock;
+  const int numNodePerElem = 4;
+  
+  // bookkeeping arrays.
+  int *nodeNumMap;
+  int *elemNumMap;
+  int *connectivity;
+  
   // initialize with dummy filename for safety.
   std::string fileName;
 
   // internal private functions.
-  void exodusCheck (int, std::string);
+  void exodusCheck      (int, std::string);
+  void getInfo          ();
+  void allocate         ();
+  void getNodeNumMap    ();
+  void getElemNumMap    ();
+  void openFile         ();  
+  void closeFile        ();
+  void getConnectivity  ();
+  
     
 public:
   
   // Constructor.
-  exodus_file (std::string);
+  exodus_file   (std::string);
+  ~exodus_file  ();
   
-  void openFile ();
-  void closeFile ();
+  void printMeshInfo  ();
+  
 };
