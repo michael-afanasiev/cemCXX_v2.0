@@ -5,7 +5,8 @@ LDFLAGS  = -L/Users/michaelafanasiev/Development/lib -lexodus -lnetcdf
 OBJECTS		= \
 	./obj/main.o \
 	./obj/exodus_file.o \
-	./obj/symmetry_systems.o
+	./obj/ses3d.o \
+	./obj/model_file.o
 	
 ./obj/%.o: ./src/%.cpp
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<

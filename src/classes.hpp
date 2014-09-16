@@ -1,4 +1,6 @@
 #include <iostream>
+#include <vector>
+#include <fstream>
 
 class exodus_file;
 class model_file;
@@ -7,20 +9,31 @@ class model_file;
 const double R_EARTH = 6371.0;
 
 class model_file {
-
-private:
-  
-  std::string modelFormat;
-
-};
-
-class symmetry_system {
-
-private:
   
 public:
   
-  symmetry_system (std::string);
+  model_file (std::string, std::string, std::string);
+
+private:
+  
+  std::string modFormat;
+  std::string symSys;
+  std::string modPath;
+  
+  std::vector<std::vector<float>> colattitude;
+  std::vector<std::vector<float>> longitude;
+  std::vector<std::vector<float>> radius;
+  
+  // TTI model parameters.
+  std::vector<std::vector<float>> vsh;
+  std::vector<std::vector<float>> vsv;
+  std::vector<std::vector<float>> vph;
+  std::vector<std::vector<float>> vpv;
+  std::vector<std::vector<float>> rho;
+   
+  
+  
+  void readSES3D (std::vector<std::vector<float>>&, std::string);
 
 };
 

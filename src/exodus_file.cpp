@@ -63,9 +63,9 @@ void exodus_file::closeFile () {
 void exodus_file::printMeshInfo () {
   
   std::cout << "Here are some facts about the mesh." << std::flush << std::endl;
-  std::cout << "Number of elements:       " << numElem << std::flush << std::endl;
-  std::cout << "Number of nodes:          " << numNodes << std::flush << std::endl;
-  std::cout << "Number of element blocks: " << numElemBlock << std::flush << std::endl;
+  std::cout << "Number of elements:\t\t" << numElem << std::flush << std::endl;
+  std::cout << "Number of nodes:\t\t" << numNodes << std::flush << std::endl;
+  std::cout << "Number of element blocks:\t" << numElemBlock << std::flush << std::endl;
   
 }
 
