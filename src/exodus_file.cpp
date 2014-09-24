@@ -32,6 +32,13 @@ exodus_file::~exodus_file () {
 
 void exodus_file::getConnectivity () {
   
+  // Reserve space for the 1 dimension of the connectivity array.
+  connectivityVec.reserve (numElemBlock);
+  
+  // Get element block ids.
+  blockNumMap = new int [numElemBlock];
+  exodusCheck (ex_get_elem_blk_ids (idexo, blockNumMap), "ex_get_elem_blk_ids");
+  
   for (size_t i=0; i<numElemBlock; i++) {
   }
   
@@ -41,10 +48,10 @@ void exodus_file::getConnectivity () {
 // the appropriate arrays.
 void exodus_file::openFile () {
   
-  std::cout << "Opening exodus file: " << fileName << std::flush << std::endl;
+  std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
   idexo = ex_open (fileName.c_str(), EX_WRITE, &comp_ws, &io_ws, &vers);
   if (idexo < 0) {
-    std::cout << "ERROR. Fatal error opening exodus file. Exiting." 
+    std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
       << std::flush << std::endl;
     exit (EXIT_FAILURE);
   }
@@ -62,13 +69,12 @@ void exodus_file::closeFile () {
 // Print mesh info.
 void exodus_file::printMeshInfo () {
   
-  std::cout << "Here are some facts about the mesh." << std::flush << std::endl;
-  std::cout << "Number of elements:\t\t" << numElem << std::flush << std::endl;
-  std::cout << "Number of nodes:\t\t" << numNodes << std::flush << std::endl;
-  std::cout << "Number of element blocks:\t" << numElemBlock << std::flush << std::endl;
+  std::cout << mgn << "\tNumber of elements:\t\t" << numElem << std::flush << std::endl;
+  std::cout << "\tNumber of nodes:\t\t" << numNodes << std::flush << std::endl;
+  std::cout << "\tNumber of element blocks:\t" << numElemBlock << rst << "\n" 
+    << std::flush << std::endl;
   
 }
-
 
 /* PRIVATE FUNCTIONS */
 
@@ -111,7 +117,8 @@ void exodus_file::getElemNumMap () {
 void exodus_file::exodusCheck (int ier, std::string function) {
   
   if (ier != 0) {
-    std::cout << "Exodus library error in " << function << std::flush << std::endl;
+    std::cout << red << "Exodus library error in " << function << rst << std::flush 
+      << std::endl;
     exit (EXIT_FAILURE);
   }
   

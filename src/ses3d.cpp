@@ -32,7 +32,8 @@ void model_file::readSES3D (std::vector<std::vector<float>> &vec, std::string ty
   int numModelRegions   = 0;
   if (file.good()) {
     
-    std::cout << "Reading SES3D parameter file: " << fileName << std::flush << std::endl;
+    std::cout << "Reading SES3D parameter file: " << blu << fileName << rst 
+      << std::flush << std::endl;
     
     while (getline (file, line)) {
       
@@ -62,7 +63,7 @@ void model_file::readSES3D (std::vector<std::vector<float>> &vec, std::string ty
     
   } else {
     
-    std::cout << "Problem reading file: " << fileName << std::flush << std::endl;
+    std::cout << red << "Problem reading file: " << fileName << std::flush << std::endl;
     exit (EXIT_FAILURE);
     
   }

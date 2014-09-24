@@ -1,6 +1,9 @@
-CXXFLAGS = -O3 -std=c++11 -I/Users/michaelafanasiev/Development/include
+CXX      = /opt/local/bin/mpic++
+CC       = /usr/local/bin/gcc-4.8
+
+CXXFLAGS = -O3 -std=c++11 -I/opt/local/include
 CFLAGS   = -O3
-LDFLAGS  = -L/Users/michaelafanasiev/Development/lib -lexodus -lnetcdf
+LDFLAGS  = -L/opt/local/lib -lexoIIv2c -lnetcdf -lhdf5_hl -lhdf5  -lz -lcurl
 
 OBJECTS		= \
 	./obj/main.o \
@@ -16,9 +19,9 @@ OBJECTS		= \
 all: main
 
 main: $(OBJECTS)
-	@$(CXX) $(LDFLAGS) -o ./bin/test $(OBJECTS) $(LDFLAGS)
+	@$(CXX) $(LDFLAGS) -o ./bin/test.exe $(OBJECTS) $(LDFLAGS)
 	@echo "Linking... $<"
 	
 #######
 clean:
-	$(RM) ./obj/* ./bin/*
+	$(RM) ./obj/*.o ./bin/*.exe

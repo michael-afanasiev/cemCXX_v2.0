@@ -1,6 +1,16 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include "mpi.h"
+
+// Colour codes for pretty writes.
+static const char *rst = "\x1b[0m";
+static const char *red = "\x1b[31m";
+static const char *grn = "\x1b[32m";
+static const char *yel = "\x1b[33m";
+static const char *mgn = "\x1b[35m";
+static const char *blu = "\x1b[36m";
+// End colour codes.
 
 class exodus_file;
 class model_file;
@@ -30,10 +40,10 @@ private:
   std::vector<std::vector<float>> vph;
   std::vector<std::vector<float>> vpv;
   std::vector<std::vector<float>> rho;
-   
-  
-  
+       
   void readSES3D (std::vector<std::vector<float>>&, std::string);
+  void broadcastModelDefinitions ();
+  void broadcastTTI ();
 
 };
 
@@ -59,10 +69,14 @@ private:
   // bookkeeping arrays.
   int *nodeNumMap;
   int *elemNumMap;
-  int *connectivity;
+  int *blockNumMap;
+  int *connectivity; //or
+  std::vector<std::vector<int>> connectivityVec;
   
   // initialize with dummy filename for safety.
   std::string fileName;
+  
+  
 
   // internal private functions.
   void exodusCheck      (int, std::string);
