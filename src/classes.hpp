@@ -1,7 +1,14 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <cmath>
+
+#include "kdtree.h"
 #include "mpi.h"
+
+using namespace std;
+
+// ###### misc. utilities. ######
 
 // Colour codes for pretty writes.
 static const char *rst = "\x1b[0m";
@@ -10,42 +17,93 @@ static const char *grn = "\x1b[32m";
 static const char *yel = "\x1b[33m";
 static const char *mgn = "\x1b[35m";
 static const char *blu = "\x1b[36m";
-// End colour codes.
 
-class exodus_file;
-class model_file;
+// Message helper functions.
+void error             (std::string);
+void intensivePrint    (std::string);
 
-// Global variables.
+// MPI helper functions.
+void broadcast2DVector (std::vector<std::vector<float>>&);
+void broadcast1DVector (std::vector<int>&);
+void broadcastInteger  (int &);
+int  getRank           ();
+
+
+// ###### global variables ######
 const double R_EARTH = 6371.0;
 
-class model_file {
+
+// ###### classes ######
+class exodus_file;
+class model;
+class ses3d;
+
+
+class model {
+
+protected:
+  
+  int myRank;
+  int worldSize;
+  
+  int numModelParams=0;
+  int numModelRegions=0;
+  
+  std::vector<int> regionSize;
+  
+  // Spherical co-ordinate data.
+  std::vector<std::vector<float>> col, lon, rad;
+  
+  // Cartesian co-ordinate data.
+  std::vector<std::vector<float>> x, y, z;
+    
+  // Elastic moduli.
+  std::vector<std::vector<float>> c11, c12, c13, c14, c15, c16;
+  std::vector<std::vector<float>> c22, c23, c24, c25, c26, c33;
+  std::vector<std::vector<float>> c34, c35, c36, c44, c45, c46;
+  std::vector<std::vector<float>> c55, c56, c66;
+  
+  // density.
+  vector<vector<float>> rho;
+
+  // subset parameters.
+  vector<vector<float>> vsv, vsh, vpv, vph;    
+  vector<vector<float>> vsi, vpi;  
+  
+  // KD-trees.
+  std::vector<std::vector<kdtree*>> trees;  
+  std::vector<std::vector<int>> datKD;
+         
+  virtual void read  (void) =0;
+  virtual void write (void) =0;
+  
+  void convert2Cartesian ();
+  void createKDtree      ();
+
+};
+
+
+class ses3d: public model {
   
 public:
   
-  model_file (std::string, std::string, std::string);
-
-private:
+  ses3d (string path, string symSys);
   
-  std::string modFormat;
-  std::string symSys;
-  std::string modPath;
+protected:
+    
+  // book keeping.
+  std::string path;
+  std::string symSys;    
+    
+  void read  (void);
+  void write (void) {};
   
-  std::vector<std::vector<float>> colattitude;
-  std::vector<std::vector<float>> longitude;
-  std::vector<std::vector<float>> radius;
+  void broadcast ();
+  void readFile  (std::vector<std::vector<float>> &vec, std::string type);
   
-  // TTI model parameters.
-  std::vector<std::vector<float>> vsh;
-  std::vector<std::vector<float>> vsv;
-  std::vector<std::vector<float>> vph;
-  std::vector<std::vector<float>> vpv;
-  std::vector<std::vector<float>> rho;
-       
-  void readSES3D (std::vector<std::vector<float>>&, std::string);
-  void broadcastModelDefinitions ();
-  void broadcastTTI ();
-
+  
 };
+
 
 class exodus_file {
   
@@ -64,20 +122,17 @@ private:
   int numNodes;
   int numElem;
   int numElemBlock;
-  const int numNodePerElem = 4;
+  const int numNodePerElem=4;
   
   // bookkeeping arrays.
   int *nodeNumMap;
   int *elemNumMap;
   int *blockNumMap;
-  int *connectivity; //or
-  std::vector<std::vector<int>> connectivityVec;
+  std::vector<int> connectivity;
   
   // initialize with dummy filename for safety.
   std::string fileName;
   
-  
-
   // internal private functions.
   void exodusCheck      (int, std::string);
   void getInfo          ();
@@ -87,6 +142,8 @@ private:
   void openFile         ();  
   void closeFile        ();
   void getConnectivity  ();
+  
+  int getNumElemInBlock (int &elmBlockId);
   
     
 public:

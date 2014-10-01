@@ -29,3 +29,10 @@
 # Exodus files.
 *.e
 *.ex2
+
+# Model files
+*/block*
+*/dRHO
+*/dVPP
+*/dVSV
+*/dVSH

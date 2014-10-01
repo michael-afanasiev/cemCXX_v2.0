@@ -9,11 +9,17 @@ OBJECTS		= \
 	./obj/main.o \
 	./obj/exodus_file.o \
 	./obj/ses3d.o \
-	./obj/model_file.o
+	./obj/model_file.o \
+	./obj/utilities.o \
+	./obj/kdtree.o
 	
 ./obj/%.o: ./src/%.cpp
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<
 	@echo "CXX $<"
+	
+./obj/%.o: ./src/%.c
+	@$(CC) $(CFLAGS) -c -o $@ $<
+	@echo "CC  $<"
 	
 #######
 all: main

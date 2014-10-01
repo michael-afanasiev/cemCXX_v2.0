@@ -1,6 +1,8 @@
 #include <exodusII.h>
 #include "classes.hpp"
 
+using namespace std;
+
 /* PUBLIC FUNCTIONS */
 
 // Class constructor for exodus file.
@@ -9,14 +11,13 @@ exodus_file::exodus_file (std::string fname) {
   fileName = fname;
   openFile ();
   
-  // Get misc. quantitative mesh info.
   getInfo         ();
   allocate        ();
   getNodeNumMap   ();
-  getElemNumMap   ();
-  
-  // TODO here. Connectivity for each block?
+  getElemNumMap   ();  
   getConnectivity ();
+  
+  printMeshInfo ();
   
 }
 
@@ -26,20 +27,47 @@ exodus_file::~exodus_file () {
   closeFile ();
   delete [] elemNumMap;
   delete [] nodeNumMap;
-  delete [] connectivity;
   
+}
+
+int exodus_file::getNumElemInBlock (int &elmBlockId) {
+  
+  char dum1[MAX_LINE_LENGTH+1];
+  int  dum2;
+  int  dum3;  
+  int  numElem;
+  
+  exodusCheck (ex_get_elem_block (idexo, elmBlockId, dum1, &numElem, &dum2, &dum3), 
+    "ex_get_elem_block");
+    
+  return numElem;
+    
 }
 
 void exodus_file::getConnectivity () {
   
   // Reserve space for the 1 dimension of the connectivity array.
-  connectivityVec.reserve (numElemBlock);
+  connectivity.resize (numElem*numNodePerElem);
   
   // Get element block ids.
   blockNumMap = new int [numElemBlock];
   exodusCheck (ex_get_elem_blk_ids (idexo, blockNumMap), "ex_get_elem_blk_ids");
-  
+    
+  // Initialize the iterator which will be used to copy to master connectivity array.
+  vector<int>::iterator next=connectivity.begin();
   for (size_t i=0; i<numElemBlock; i++) {
+
+    // Initialze scratch array to pull from exodus file.
+    int numElemThisBlock = getNumElemInBlock (blockNumMap[i]);
+    int *scratch         = new int [numElemThisBlock*numNodePerElem];
+    exodusCheck (ex_get_elem_conn (idexo, blockNumMap[i], scratch), "ex_get_elem_conn");
+    
+    // Copy the scratch array to master array and advance the iterator.
+    next = std::copy (scratch, scratch+numElemThisBlock*numNodePerElem, next);
+    
+    // Clear scratch memory.
+    delete [] scratch;
+            
   }
   
 }
@@ -69,9 +97,9 @@ void exodus_file::closeFile () {
 // Print mesh info.
 void exodus_file::printMeshInfo () {
   
-  std::cout << mgn << "\tNumber of elements:\t\t" << numElem << std::flush << std::endl;
-  std::cout << "\tNumber of nodes:\t\t" << numNodes << std::flush << std::endl;
-  std::cout << "\tNumber of element blocks:\t" << numElemBlock << rst << "\n" 
+  std::cout << mgn << "Number of elements:\t\t" << numElem << std::flush << std::endl;
+  std::cout << "Number of nodes:\t\t" << numNodes << std::flush << std::endl;
+  std::cout << "Number of element blocks:\t" << numElemBlock << rst << "\n" 
     << std::flush << std::endl;
   
 }
@@ -95,7 +123,6 @@ void exodus_file::allocate () {
   
   nodeNumMap   = new int [numNodes];
   elemNumMap   = new int [numElem];
-  connectivity = new int [numElem*numNodePerElem];
     
 }
 
