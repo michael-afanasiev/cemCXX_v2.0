@@ -32,6 +32,52 @@ void rotation_matrix::rotate (float &xOld, float &yOld, float &zOld,
 
 }
 
+std::vector<float> getNormalVector (std::vector<float> &A,
+                                    std::vector<float> &B,
+                                    std::vector<float> &C) {
+                                      
+   // Gets the normal vector to 3 points in 3-dimensions. Used to determine the equation of a plane.
+                                      
+  std::vector<float> AB;
+  std::vector<float> AC;
+  std::vector<float> n;
+  
+  AB.resize (3);
+  AC.resize (3);
+  n.resize  (3);
+  
+  AB[0] = B[0] - A[0];
+  AB[1] = B[1] - A[1];
+  AB[2] = B[2] - A[2];
+  
+  AC[0] = C[0] - A[0];
+  AC[1] = C[1] - A[1];
+  AC[2] = C[2] - A[2];
+  
+  n[0] = AB[1] * AC[2] - AB[2] * AC[1];
+  n[1] = AB[0] * AC[2] - AB[2] * AC[0] * (-1);
+  n[2] = AB[0] * AC[1] - AB[1] * AC[0];
+  
+  float magnitude = sqrt (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+  n[0] = n[0] / magnitude;
+  n[1] = n[1] / magnitude;
+  n[2] = n[2] / magnitude;
+  
+  return n;
+  
+}
+
+float projWonV_Dist (float &x, float &y, float&z, std::vector<float> &v, std::vector<float> &x0) {
+  
+  // Projects a vector x - x0 onto the plane v.
+  
+  float dotVW = v[0] * (x-x0[0]) + v[1] * (y-x0[1]) + v[2] * (z - x0[2]);
+  float magV  = sqrt (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+  
+  return dotVW / magV;
+  
+}
+
 float deg2Rad (float &deg) {
   
   float rad = deg * M_PI / 180.;
@@ -121,6 +167,12 @@ void broadcast2DVector (vector<vector<float>> &bVector) {
   }  
 }
 
+float getRadius (float &x, float &y, float &z) {
+  
+  float rad = sqrt (x*x + y*y + z*z);
+  return rad;
+  
+}
 
 // Messages.
 void intensivePrint (string message) {

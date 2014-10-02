@@ -31,10 +31,34 @@ int  getRank           ();
 // Math functions
 float deg2Rad (float &deg);
 float rad2Deg (float &rad);
+float getRadius (float &x, float &y, float &z);
+float projWonV_Dist (float &x, float &y, float &z, std::vector<float> &v, std::vector<float> &x0);
+std::vector<float> getNormalVector (std::vector<float> &A, std::vector<float> &B, 
+                                    std::vector<float> &C);
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
 
+class facet {
+  
+public:
+  
+    
+  // nodes of polygon.
+  vector<float> v0; 
+  vector<float> v1;
+  vector<float> v2;
+  
+  // normal.
+  vector<float> n;
+  
+  // outside set.
+  vector<int> region;
+  vector<int> index;
+
+  facet (vector<float> v0, vector<float> v1, vector<float> v2);
+    
+};
 
 // ###### classes ######
 class rotation_matrix;
@@ -80,12 +104,31 @@ protected:
   
   // Rotation parameters.
   float angle, xRot, yRot, zRot;
+  
+  // Model extremes.
+  float xMin, yMin, zMin;
+  float xMax, yMax, zMax;
+  float rMax, rMin;
+  
+  int xMinI[2], yMinI[2], zMinI[2];
+  int xMaxI[2], yMaxI[2], zMaxI[2];
+  
+  
+  std::vector<float> p1, p2, p3, p4;
+  std::vector<float> n1, n2, n3, n4;
          
   virtual void read  (void) =0;
   virtual void write (void) =0;
   
   void createKDtree      ();
   void rotate            ();
+  void findMinMax        ();
+  void findEdgePlanes    ();
+  void findConvexHull    ();
+  void findMinMaxCartesian ();
+  void findMinMaxRadius ();
+  
+  bool testEdge (float &x, float &y, float &z);
 
 };
 

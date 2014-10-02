@@ -10,19 +10,32 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   path   = pathIn;
   symSys = symSysIn;
   
-  angle=0.;
-  // float deg=30;
-  // angle = deg2Rad (deg);
-  // xRot = 0.;
-  // yRot = 1.;
-  // zRot = 0.;
+  float deg=57.5;
+  angle = deg2Rad (deg);
+  xRot = 0.;
+  yRot = 1.;
+  zRot = 0.;
   
   read              ();
   broadcast         ();
   convert2Radians   ();
   convert2Cartesian ();
   rotate            ();
-  createKDtree      ();
+  findMinMaxCartesian        ();
+  findMinMaxRadius ();
+  findConvexHull ();
+  findEdgePlanes    ();
+  // createKDtree      ();
+  
+  for (size_t r=0; r<numModelRegions; r++) {
+    
+    int numParams = x[r].size();
+    for (size_t i=0; i<numParams; i++) {
+      
+      testEdge (x[r][i], y[r][i], z[r][i]);
+      
+    }
+  }
     
 }
 
