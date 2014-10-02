@@ -2,24 +2,49 @@
 
 using namespace std;
 
-// utilities::utilities () {
-//
-//   rot11 = cos(a) + (x * x) * (1 - cos(a));
-//   rot21 = z * sin(a) + x * y * (1 - cos(a));
-//   rot31 = y * sin(a) + x * z * (1 - cos(a));
-//   rot12 = x * y * (1 - cos(a)) - z * sin(a);
-//   rot22 = cos(a) + (y * y) * (1 - cos(a));
-//   rot32 = x * sin(a) + y * z * (1 - cos(a));
-//   rot13 = y * sin(a) + x * z * (1 - cos(a));
-//   rot23 = x * sin(a) + y * z * (1 - cos(a));
-//   rot33 = cos(a) + (z * x) * (1 - cos(a));
-//
-//   rot23 = (-1) * rot23;
-//   rot31 = (-1) * rot31;
-//
-// }
+rotation_matrix::rotation_matrix (float &a, float &x, float &y, float&z) {
 
+  rot11 = cos(a) + (x * x) * (1 - cos(a));
+  rot21 = z * sin(a) + x * y * (1 - cos(a));
+  rot31 = y * sin(a) + x * z * (1 - cos(a));
+  rot12 = x * y * (1 - cos(a)) - z * sin(a);
+  rot22 = cos(a) + (y * y) * (1 - cos(a));
+  rot32 = x * sin(a) + y * z * (1 - cos(a));
+  rot13 = y * sin(a) + x * z * (1 - cos(a));
+  rot23 = x * sin(a) + y * z * (1 - cos(a));
+  rot33 = cos(a) + (z * x) * (1 - cos(a));
 
+  rot23 = (-1) * rot23;
+  rot31 = (-1) * rot31;
+
+}
+
+void rotation_matrix::rotate (float &xOld, float &yOld, float &zOld,
+                              float &xNew, float &yNew, float &zNew) {
+                           
+  float xTmp = rot11 * xOld + rot21 * yOld + rot31 * zOld;
+  float yTmp = rot12 * xOld + rot22 * yOld + rot32 * zOld;
+  float zTmp = rot13 * xOld + rot23 * yOld + rot33 * zOld;
+  
+  xNew = xTmp;
+  yNew = yTmp;
+  zNew = zTmp;
+
+}
+
+float deg2Rad (float &deg) {
+  
+  float rad = deg * M_PI / 180.;
+  return rad;
+  
+}
+
+float rad2Deg (float &rad) {
+  
+  float deg = rad * 180. / M_PI;
+  return deg;
+  
+}
 
 // MPI Things.
 int getRank () {

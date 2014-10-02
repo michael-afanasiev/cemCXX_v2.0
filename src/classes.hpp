@@ -28,12 +28,16 @@ void broadcast1DVector (std::vector<int>&);
 void broadcastInteger  (int &);
 int  getRank           ();
 
+// Math functions
+float deg2Rad (float &deg);
+float rad2Deg (float &rad);
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
 
 
 // ###### classes ######
+class rotation_matrix;
 class exodus_file;
 class model;
 class ses3d;
@@ -73,12 +77,15 @@ protected:
   // KD-trees.
   std::vector<std::vector<kdtree*>> trees;  
   std::vector<std::vector<int>> datKD;
+  
+  // Rotation parameters.
+  float angle, xRot, yRot, zRot;
          
   virtual void read  (void) =0;
   virtual void write (void) =0;
   
-  void convert2Cartesian ();
   void createKDtree      ();
+  void rotate            ();
 
 };
 
@@ -98,8 +105,11 @@ protected:
   void read  (void);
   void write (void) {};
   
-  void broadcast ();
-  void readFile  (std::vector<std::vector<float>> &vec, std::string type);
+  void broadcast         ();
+  void readFile          (std::vector<std::vector<float>> &vec, std::string type);
+  void convert2Cartesian ();
+  void convert2Radians   ();
+  
   
   
 };
@@ -154,4 +164,20 @@ public:
   
   void printMeshInfo  ();
   
+};
+
+
+class rotation_matrix {
+
+public:
+  
+  rotation_matrix (float &ang, float &x, float &y, float &z);
+  void rotate     (float &x,    float &y,    float &z,
+                   float &xNew, float &yNew, float &zNew);
+  
+private:
+  
+  float rot11, rot12, rot13, rot21, rot22, rot23;
+  float rot31, rot32, rot33;
+
 };

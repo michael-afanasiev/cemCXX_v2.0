@@ -10,9 +10,18 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   path   = pathIn;
   symSys = symSysIn;
   
+  angle=0.;
+  // float deg=30;
+  // angle = deg2Rad (deg);
+  // xRot = 0.;
+  // yRot = 1.;
+  // zRot = 0.;
+  
   read              ();
   broadcast         ();
+  convert2Radians   ();
   convert2Cartesian ();
+  rotate            ();
   createKDtree      ();
     
 }
@@ -24,7 +33,7 @@ void ses3d::read () {
     
     readFile (col, "colatitude");
     readFile (lon, "longitude");
-    readFile (rad, "radius");
+    readFile (rad, "radius");        
 
     if (symSys == "tti") {
   
@@ -60,6 +69,32 @@ void ses3d::read () {
     
     }  
   }
+}
+
+void ses3d::convert2Radians () {
+  
+  vector<float>::iterator it;
+  
+  size_t k=0;
+  for (size_t i=0; i<numModelRegions; i++) {
+    
+    k = 0;
+    for (it=col[i].begin(); it!=col[i].end(); ++it) {
+      
+      float tmp = deg2Rad (*it);
+      col[i][k] = tmp;
+      
+    }
+   
+    k = 0;
+    for (it=lon[i].begin(); it!=lon[i].end(); ++it) {
+      
+      float tmp = deg2Rad (*it);
+      lon[i][k] = tmp;
+      
+    }
+  }  
+  
 }
 
 void ses3d::broadcast () {
@@ -163,4 +198,52 @@ void ses3d::readFile (vector<vector<float>> &vec, string type) {
     }
   }
   
+}
+
+void ses3d::convert2Cartesian () {
+  
+  // This function converts the spherical co-ordinates of the model array into xyz coordinates, 
+  // overwriting the old ones.
+  
+  intensivePrint ("Converting to cartesian co-ordinates.");
+  
+  vector<vector<float>>::iterator outer;
+  vector<float>::iterator colIter, lonIter, radIter;
+  
+  if (col.empty ())
+    error ("No spherical co-ordinate arrays stored. Are you sure you read them in?");
+  
+  if (not x.empty ()) {    
+    x.clear ();
+    y.clear ();
+    z.clear ();    
+  }
+  
+  x.resize (numModelRegions);
+  y.resize (numModelRegions);
+  z.resize (numModelRegions);
+  
+  for (size_t i=0; i<numModelRegions; i++) {
+    
+    size_t k=0;
+    
+    int numParams = col[i].size () * lon[i].size() * rad[i].size ();
+    x[i].resize (numParams);
+    y[i].resize (numParams);
+    z[i].resize (numParams);
+    
+    for (colIter=col[i].begin(); colIter!=col[i].end(); ++colIter) {
+      for (lonIter=lon[i].begin(); lonIter!=lon[i].end(); ++lonIter) {
+        for (radIter=rad[i].begin(); radIter!=rad[i].end(); ++radIter) {
+          
+          x[i][k] = *radIter * cos (*lonIter) * sin (*colIter);
+          y[i][k] = *radIter * sin (*lonIter) * sin (*colIter);
+          z[i][k] = *radIter * cos (*colIter);
+          k++;
+          
+        }
+      }
+    }    
+  }
+    
 }
