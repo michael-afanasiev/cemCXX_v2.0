@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
+#include <stack>
 #include <cmath>
 
 #include "kdtree.h"
@@ -21,6 +22,7 @@ static const char *blu = "\x1b[36m";
 // Message helper functions.
 void error             (std::string);
 void intensivePrint    (std::string);
+std::vector<float> initializePoint (float &x, float &y, float &z);
 
 // MPI helper functions.
 void broadcast2DVector (std::vector<std::vector<float>>&);
@@ -35,30 +37,10 @@ float getRadius (float &x, float &y, float &z);
 float projWonV_Dist (float &x, float &y, float &z, std::vector<float> &v, std::vector<float> &x0);
 std::vector<float> getNormalVector (std::vector<float> &A, std::vector<float> &B, 
                                     std::vector<float> &C);
-
+float distFromLine (vector<float> &x0, vector<float> &x1, vector<float> &x2);
+std::vector<float> crossProduct (vector<float> &A, vector<float> &B);
 // ###### global variables ######
 const double R_EARTH = 6371.0;
-
-class facet {
-  
-public:
-  
-    
-  // nodes of polygon.
-  vector<float> v0; 
-  vector<float> v1;
-  vector<float> v2;
-  
-  // normal.
-  vector<float> n;
-  
-  // outside set.
-  vector<int> region;
-  vector<int> index;
-
-  facet (vector<float> v0, vector<float> v1, vector<float> v2);
-    
-};
 
 // ###### classes ######
 class rotation_matrix;
@@ -67,7 +49,72 @@ class model;
 class ses3d;
 
 
+
+class pointTracker {
+
+public:
+  
+  pointTracker (model &);
+  void setFalse (size_t &, size_t &);
+  bool check (size_t &, size_t &);
+  void reset (model &);
+  
+  vector<vector<bool>> pointTrack;
+
+
+};
+
+class edge {
+
+public:
+  
+  edge (vector<float>, vector<float>);
+  
+  vector<float> v0;
+  vector<float> v1;
+    
+};
+
+class facet {
+  
+public:
+      
+  // nodes of polygon.
+  vector<float> v0; 
+  vector<float> v1;
+  vector<float> v2;
+  
+  // normal.
+  vector<float> n ;
+  
+  // outside set.
+  vector<int> oldRegionSet;
+  vector<int> oldIndexSet;
+  vector<int> regionSet;
+  vector<int> indexSet;
+  
+  vector<float> pMax;
+  float dMax;
+  
+  float dMaxRegion;
+  float dMaxIndex;
+  
+  bool outside;
+  bool hasOutsideSet;
+  bool remove;
+
+  facet (vector<float> v0, vector<float> v1, vector<float> v2, vector<float> ctr);
+  
+  void reset ();
+  bool checkNeighbour (facet &);
+  std::vector<edge> findHorizon (facet &);
+    
+};
+
+
 class model {
+
+  friend class pointTracker;
 
 protected:
   
@@ -108,10 +155,11 @@ protected:
   // Model extremes.
   float xMin, yMin, zMin;
   float xMax, yMax, zMax;
+  float xCnt, yCnt, zCnt;
   float rMax, rMin;
   
-  int xMinI[2], yMinI[2], zMinI[2];
-  int xMaxI[2], yMaxI[2], zMaxI[2];
+  int xMaxReg, yMaxReg, zMaxReg, xMinReg, yMinReg, zMinReg;
+  int xMaxInd, yMaxInd, zMaxInd, xMinInd, yMinInd, zMinInd;
   
   
   std::vector<float> p1, p2, p3, p4;
@@ -127,6 +175,8 @@ protected:
   void findConvexHull    ();
   void findMinMaxCartesian ();
   void findMinMaxRadius ();
+  void dumpPointCloud ();
+  void dumpFacet (ofstream &myfile, facet &f);
   
   bool testEdge (float &x, float &y, float &z);
 
@@ -152,6 +202,8 @@ protected:
   void readFile          (std::vector<std::vector<float>> &vec, std::string type);
   void convert2Cartesian ();
   void convert2Radians   ();
+  
+  int getTotalParameters ();
   
   
   

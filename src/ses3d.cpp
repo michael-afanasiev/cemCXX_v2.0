@@ -10,7 +10,7 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   path   = pathIn;
   symSys = symSysIn;
   
-  float deg=57.5;
+  float deg=0;
   angle = deg2Rad (deg);
   xRot = 0.;
   yRot = 1.;
@@ -21,8 +21,10 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   convert2Radians   ();
   convert2Cartesian ();
   rotate            ();
+  getTotalParameters ();
   findMinMaxCartesian        ();
   findMinMaxRadius ();
+  dumpPointCloud ();
   findConvexHull ();
   findEdgePlanes    ();
   // createKDtree      ();
@@ -37,6 +39,16 @@ ses3d::ses3d (string pathIn, string symSysIn) {
     }
   }
     
+}
+
+int ses3d::getTotalParameters () {
+  
+  int numParams = 0;
+  for (size_t i=0; i<numModelRegions; i++) {
+    
+    numParams += x[i].size();
+    
+  }
 }
 
 void ses3d::read () {
@@ -96,6 +108,7 @@ void ses3d::convert2Radians () {
       
       float tmp = deg2Rad (*it);
       col[i][k] = tmp;
+      k++;
       
     }
    
@@ -104,6 +117,7 @@ void ses3d::convert2Radians () {
       
       float tmp = deg2Rad (*it);
       lon[i][k] = tmp;
+      k++;
       
     }
   }  

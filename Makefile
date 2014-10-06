@@ -1,7 +1,7 @@
 CXX      = /opt/local/bin/mpic++
 CC       = /usr/local/bin/gcc-4.8
 
-CXXFLAGS = -O3 -std=c++11 -I/opt/local/include
+CXXFLAGS = -g -std=c++11 -I/opt/local/include
 CFLAGS   = -O3
 LDFLAGS  = -L/opt/local/lib -lexoIIv2c -lnetcdf -lhdf5_hl -lhdf5  -lz -lcurl
 

@@ -54,17 +54,69 @@ std::vector<float> getNormalVector (std::vector<float> &A,
   AC[1] = C[1] - A[1];
   AC[2] = C[2] - A[2];
   
-  n[0] = AB[1] * AC[2] - AB[2] * AC[1];
-  n[1] = AB[0] * AC[2] - AB[2] * AC[0] * (-1);
-  n[2] = AB[0] * AC[1] - AB[1] * AC[0];
+  n = crossProduct (AB, AC);
   
   float magnitude = sqrt (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
   n[0] = n[0] / magnitude;
   n[1] = n[1] / magnitude;
   n[2] = n[2] / magnitude;
   
+  float x = 0;
+  float y = 0;
+  float z = 0;
+    
   return n;
   
+}
+
+vector<float> crossProduct (vector<float> &a, vector<float> &b) {
+  
+  vector<float> vec (3, 0);
+  
+  vec[0] = a[1] * b[2] - a[2] * b[1];
+  vec[1] = a[0] * b[2] - a[2] * b[0] * (-1);
+  vec[2] = a[0] * b[1] - a[1] * b[0];
+  
+  return vec;
+  
+}
+
+vector<float> initializePoint (float &x, float &y, float &z) {
+  
+  std::vector<float> vec (3, 0);
+  vec[0] = x;
+  vec[1] = y;
+  vec[2] = z;
+  
+  return vec;
+  
+}
+
+float distFromLine (vector<float> &x0, vector<float> &x1, vector<float> &x2) {
+  
+  vector<float> x01 (3, 0), x02 (3, 0), x21 (3, 0);
+  
+  x01[0] = x0[0] - x1[0];
+  x01[1] = x0[1] - x1[1];
+  x01[2] = x0[2] - x1[2];
+  
+  x02[0] = x0[0] - x2[0];
+  x02[1] = x0[1] - x2[1];
+  x02[2] = x0[2] - x2[2];
+  
+  x21[0] = x2[0] - x1[0];
+  x21[1] = x2[1] - x1[1];
+  x21[2] = x2[2] - x1[2];
+  
+  vector<float> tmp = crossProduct (x01, x02);
+  
+  float top = (sqrt (tmp[0]*tmp[0] + tmp[1]*tmp[1] + tmp[2]*tmp[2]));
+  float bot = (sqrt (x21[0]*x21[0] + x21[1]*x21[1] + x21[2]*x21[2]));
+  
+  float d = top / bot;
+  
+  return d;
+    
 }
 
 float projWonV_Dist (float &x, float &y, float&z, std::vector<float> &v, std::vector<float> &x0) {
