@@ -39,27 +39,6 @@ std::vector<float> getNormalVector (std::vector<float> &A, std::vector<float> &B
 // ###### global variables ######
 const double R_EARTH = 6371.0;
 
-class facet {
-  
-public:
-  
-    
-  // nodes of polygon.
-  vector<float> v0; 
-  vector<float> v1;
-  vector<float> v2;
-  
-  // normal.
-  vector<float> n;
-  
-  // outside set.
-  vector<int> region;
-  vector<int> index;
-
-  facet (vector<float> v0, vector<float> v1, vector<float> v2);
-    
-};
-
 // ###### classes ######
 class rotation_matrix;
 class exodus_file;
@@ -109,26 +88,15 @@ protected:
   float xMin, yMin, zMin;
   float xMax, yMax, zMax;
   float rMax, rMin;
-  
-  int xMinI[2], yMinI[2], zMinI[2];
-  int xMaxI[2], yMaxI[2], zMaxI[2];
-  
-  
-  std::vector<float> p1, p2, p3, p4;
-  std::vector<float> n1, n2, n3, n4;
-         
+
   virtual void read  (void) =0;
   virtual void write (void) =0;
   
-  void createKDtree      ();
-  void rotate            ();
-  void findMinMax        ();
-  void findEdgePlanes    ();
-  void findConvexHull    ();
+  void createKDtree        ();
+  void rotate              ();
+  void findMinMax          ();
   void findMinMaxCartesian ();
-  void findMinMaxRadius ();
-  
-  bool testEdge (float &x, float &y, float &z);
+  void findMinMaxRadius    ();
 
 };
 

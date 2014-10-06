@@ -11,7 +11,6 @@ OBJECTS		= \
 	./obj/ses3d.o \
 	./obj/model_file.o \
 	./obj/utilities.o \
-	./obj/facet.o \
 	./obj/kdtree.o
 	
 ./obj/%.o: ./src/%.cpp
