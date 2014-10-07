@@ -153,6 +153,91 @@ void exodus_file::getConnectivity () {
   
 }
 
+void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y, 
+                          std::vector<double> &z) {
+  
+  double *xmsh = new double [numNodes];
+  double *ymsh = new double [numNodes];
+  double *zmsh = new double [numNodes];
+  
+  exodusCheck (ex_get_coord (idexo, xmsh, ymsh, zmsh), "ex_get_coord");
+  
+  x.resize (numNodes); y.resize (numNodes); z.resize (numNodes);
+  std::copy (xmsh, xmsh+numNodes, x.begin ());
+  std::copy (ymsh, ymsh+numNodes, y.begin ());
+  std::copy (zmsh, zmsh+numNodes, z.begin ());
+  
+  delete [] xmsh;
+  delete [] ymsh;
+  delete [] zmsh;
+  
+}
+
+std::vector<double> exodus_file::getVariable (std::string varName) {
+
+  // get number of variables stored in file.
+  int numVars;
+  exodusCheck (ex_get_var_param (idexo, "n", &numVars), "ex_get_var_param");
+    
+  // get array of variable names.
+  size_t varIter = numVars;
+  char *var_names[varIter];
+  for ( size_t i=0; i<varIter; i++ )
+    var_names[i] = (char *) calloc ( (MAX_STR_LENGTH+1), sizeof(char) );
+  exodusCheck (ex_get_var_names (idexo, "n", varIter, var_names), "ex_get_var_names");
+  
+  // find the right name.
+  int index=0;
+  for (size_t i=0; i<varIter; i++) {
+    if (strcmp (var_names[i], varName.c_str ()) == 0)
+      index = (i + 1);    
+  }
+  
+  // extract the variable.
+  double *scratch = new double [numNodes];
+  exodusCheck (ex_get_nodal_var (idexo, 1, index, numNodes, scratch), "ex_get_nodal_var");
+  
+  // copy to vector.      
+  std::vector<double> var;
+  var.resize (numNodes);
+  std::copy (scratch, scratch+numNodes, var.begin ());
+  
+  // clean up and return.
+  delete [] scratch;
+  return var;
+  
+}
+
+void exodus_file::writeVariable (std::vector<double> &var, std::string varName) {
+  
+  // get number of variables stored in file.
+  int numVars;
+  exodusCheck (ex_get_var_param (idexo, "n", &numVars), "ex_get_var_param");
+  
+  // get array of variable names.
+  size_t varIter = numVars;
+  char *var_names[varIter];
+  for ( size_t i=0; i<varIter; i++ )
+    var_names[i] = (char *) calloc ( (MAX_STR_LENGTH+1), sizeof(char) );
+  exodusCheck (ex_get_var_names (idexo, "n", varIter, var_names), "ex_get_var_names");
+  
+  // find the right name.
+  int index=0;
+  for (size_t i=0; i<varIter; i++) {
+    if (strcmp (var_names[i], varName.c_str ()) == 0)
+      index = (i + 1);    
+  }
+  
+  // write the variable.
+  double *scratch = new double [numNodes];
+  std::copy (var.begin (), var.end (), scratch);
+  
+  exodusCheck (ex_put_nodal_var (idexo, 1, index, numNodes, scratch), "ex_put_nodal_var");
+  
+  
+}
+
+
 // Checks to make sure we're doing a sane operation on the exodus file.
 void exodus_file::exodusCheck (int ier, std::string function) {
   

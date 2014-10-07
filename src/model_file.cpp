@@ -6,8 +6,8 @@ void model::createKDtree () {
   
   intensivePrint ("Creating KD-trees.");
   
-  trees.resize (numModelRegions);
-  datKD.resize (numModelRegions);
+  trees.reserve (numModelRegions);
+  datKD.resize  (numModelRegions);
   
   for (size_t r=0; r<numModelRegions; r++) {
     
@@ -22,43 +22,45 @@ void model::createKDtree () {
       
     }
     
-    trees[r].push_back (tree);
+    trees.push_back (tree);
   
   }  
   
 }
 
-bool model::testBoundingBox (double x, double y, double z) {
+int model::testBoundingBox (double x, double y, double z) {
   
+  int region = -1;
   double colTest, lonTest, radTest;
   
   // rotate to plane.
   rotateToYZ->rotate (x, y, z, x, y, z);
-  rotateToXY->rotate (x, y, z, x, y, z);
+  // rotateToXY->rotate (x, y, z, x, y, z);
   
   // transform to spherical co-ordinate.
   xyz2ColLonRad (x, y, z, colTest, lonTest, radTest);
 
   // test to see if point is within rotated domain.
-  if (colTest <= colMaxSearch && colTest >= colMinSearch &&
-      lonTest <= lonMaxSearch && lonTest >= lonMinSearch &&
-      radTest <= radMaxSearch && radTest >= radMinSearch) {
+  for (size_t r=0; r<numModelRegions; r++) {
+    if (colTest <= colMaxSearch[r] && colTest >= colMinSearch[r] &&
+        lonTest <= lonMaxSearch[r] && lonTest >= lonMinSearch[r] &&
+        radTest <= radMaxSearch[r] && radTest >= radMinSearch[r])  
+          
+      region = r;    
+    
+  }
   
-    return true;
-    
-  } else {
-    
-    return false;
-    
-  }          
+  return region;
   
 }
 
 void model::findBoundingBox () {
   
+  // find the vector pointing to the center of the box.
   double colCtr, lonCtr, radDum;
   xyz2ColLonRad (xCtr, yCtr, zCtr, colCtr, lonCtr, radDum);
   
+  // initialize arrays to physical domain.
   xSearch = x;
   ySearch = y;
   zSearch = z;
@@ -80,24 +82,23 @@ void model::findBoundingBox () {
     }
   }   
 
-  // Rotate to XY plane.
-  double NINETY  = 90.;
-  double angleXY = -1 * (deg2Rad (NINETY) - colCtr);
-  xRot = 0; yRot = 1; zRot = 0;
-  rotateToXY = new rotation_matrix (angleXY, xRot, yRot, zRot);
-  for (size_t r=0; r<numModelRegions; r++) {
-
-    size_t numParams = x[r].size ();
-    for (size_t i=0; i<numParams; i++) {
-    
-      rotateToXY->rotate (xSearch[r][i], ySearch[r][i], zSearch[r][i], 
-                          xSearch[r][i], ySearch[r][i], zSearch[r][i]);
-    
-    }
-  }  
+  // // Rotate to XY plane.
+  // double NINETY  = 90.;
+  // double angleXY = -1 * (deg2Rad (NINETY) - colCtr);
+  // xRot = 0; yRot = 1; zRot = 0;
+  // rotateToXY = new rotation_matrix (angleXY, xRot, yRot, zRot);
+  // for (size_t r=0; r<numModelRegions; r++) {
+  //
+  //   size_t numParams = x[r].size ();
+  //   for (size_t i=0; i<numParams; i++) {
+  //
+  //     rotateToXY->rotate (xSearch[r][i], ySearch[r][i], zSearch[r][i],
+  //                         xSearch[r][i], ySearch[r][i], zSearch[r][i]);
+  //
+  //   }
+  // }
     
 }
-
 
 void model::rotate () {
   
@@ -127,8 +128,13 @@ void model::rotate () {
 
 void model::findMinMaxRadius () {
   
-  rMin = getRadius (x[0][0], y[0][0], z[0][0]);
-  rMax = getRadius (x[0][0], y[0][0], z[0][0]);
+  rMin.resize (numModelRegions);
+  rMax.resize (numModelRegions);
+  
+  for (size_t r=0; r<numModelRegions; r++) {
+    rMin[r] = getRadius (x[r][0], y[r][0], z[r][0]);
+    rMax[r] = getRadius (x[r][0], y[r][0], z[r][0]);
+  }
   
   for (size_t r=0; r<numModelRegions; r++) {
     
@@ -137,29 +143,38 @@ void model::findMinMaxRadius () {
       
       double rad = getRadius (x[r][i], y[r][i], z[r][i]);
       
-      if (rad < rMin)
-        rMin = rad;
+      if (rad < rMin[r])
+        rMin[r] = rad;
       
-      if (rad > rMax)
-        rMax = rad;
+      if (rad > rMax[r])
+        rMax[r] = rad;
       
     }
   }
-
-  // Just set rmax to be R_EARTH.
-  rMax = R_EARTH;
   
 }
 
 void model::findMinMaxPhys () {
   
-  xMin = x[0][0]; yMin = y[0][0]; zMin = z[0][0];
-  xMax = x[0][0]; yMax = y[0][0]; zMax = z[0][0];
-  xCtr = 0; yCtr = 0; zCtr = 0;
+  xMin.resize (numModelRegions); 
+  yMin.resize (numModelRegions);
+  zMin.resize (numModelRegions);
+  xMax.resize (numModelRegions); 
+  yMax.resize (numModelRegions); 
+  zMax.resize (numModelRegions);
+  colMin.resize (numModelRegions); 
+  colMax.resize (numModelRegions);
+  lonMin.resize (numModelRegions); 
+  lonMax.resize (numModelRegions);
   
-  colMin = 180.; colMax = 0.;
-  lonMin = 180.; lonMax = -180.;  
+  for (size_t r=0; r<numModelRegions; r++) {
+    xMin[r] = x[r][0]; yMin[r] = y[r][0]; zMin[r] = z[r][0];
+    xMax[r] = x[r][0]; yMax[r] = y[r][0]; zMax[r] = z[r][0];
+    colMin[r] = 180.;  colMax[r] = 0.;
+    lonMin[r] = 180.;  lonMax[r] = -180.;  
+  }
   
+  xCtr = 0; yCtr = 0; zCtr = 0;    
   for (size_t r=0; r<numModelRegions; r++) {
     
     size_t numParams = x[r].size();
@@ -172,35 +187,35 @@ void model::findMinMaxPhys () {
       yCtr += y[r][i];
       zCtr += z[r][i];
       
-      if (x[r][i] < xMin)
-        xMin   = x[r][i];
+      if (x[r][i] < xMin[r])
+        xMin[r]   = x[r][i];
     
-      if (y[r][i] < yMin)
-        yMin   = y[r][i];
+      if (y[r][i] < yMin[r])
+        yMin[r]   = y[r][i];
       
-      if (z[r][i] < zMin) 
-        zMin   = z[r][i];
+      if (z[r][i] < zMin[r]) 
+        zMin[r]   = z[r][i];
       
-      if (x[r][i] > xMax) 
-        xMax   = x[r][i];
+      if (x[r][i] > xMax[r]) 
+        xMax[r]   = x[r][i];
       
-      if (y[r][i] > yMax) 
-        yMax   = y[r][i];
+      if (y[r][i] > yMax[r]) 
+        yMax[r]   = y[r][i];
       
-      if (z[r][i] > zMax)
-        zMax   = z[r][i];       
+      if (z[r][i] > zMax[r])
+        zMax[r]   = z[r][i];       
           
-      if (colDum < colMin)
-        colMin = colDum;
+      if (colDum < colMin[r])
+        colMin[r] = colDum;
     
-      if (colDum > colMax)
-        colMax = colDum;
+      if (colDum > colMax[r])
+        colMax[r] = colDum;
     
-      if (lonDum < lonMin)
-        lonMin = lonDum;
+      if (lonDum < lonMin[r])
+        lonMin[r] = lonDum;
     
-      if (lonDum > lonMax)
-        lonMax = lonDum;
+      if (lonDum > lonMax[r])
+        lonMax[r] = lonDum;
 
                   
     }
@@ -215,13 +230,25 @@ void model::findMinMaxPhys () {
 
 void model::findMinMaxRot () {
   
-  xMinSearch = xSearch[0][0]; yMinSearch = ySearch[0][0]; zMinSearch = zSearch[0][0];
-  xMaxSearch = xSearch[0][0]; yMaxSearch = ySearch[0][0]; zMaxSearch = zSearch[0][0];
-  xCtrSearch = 0; yCtrSearch = 0; zCtrSearch = 0;
+  xMinSearch.resize (numModelRegions); 
+  yMinSearch.resize (numModelRegions); 
+  zMinSearch.resize (numModelRegions);
+  xMaxSearch.resize (numModelRegions); 
+  yMaxSearch.resize (numModelRegions); 
+  zMaxSearch.resize (numModelRegions);
+  colMinSearch.resize (numModelRegions); 
+  colMaxSearch.resize (numModelRegions);
+  lonMinSearch.resize (numModelRegions); 
+  lonMaxSearch.resize (numModelRegions);
+  radMaxSearch.resize (numModelRegions);
+  radMinSearch.resize (numModelRegions);
   
-  colMinSearch = 180.; colMaxSearch = 0.;
-  lonMinSearch = 180.; lonMaxSearch = -180.;  
-  radMinSearch = R_EARTH; radMaxSearch = 0.;
+  for (size_t r=0; r<numModelRegions; r++) {
+    xMinSearch[r] = x[r][0]; yMinSearch[r] = y[r][0]; zMinSearch[r] = z[r][0];
+    xMaxSearch[r] = x[r][0]; yMaxSearch[r] = y[r][0]; zMaxSearch[r] = z[r][0];
+    colMinSearch[r] = 180.;  colMaxSearch[r] = 0.;
+    lonMinSearch[r] = 180.;  lonMaxSearch[r] = -180.;  
+  }
   
   for (size_t r=0; r<numModelRegions; r++) {
     
@@ -235,41 +262,41 @@ void model::findMinMaxRot () {
       yCtrSearch += ySearch[r][i];
       zCtrSearch += zSearch[r][i];
       
-      if (xSearch[r][i] < xMin)
-        xMinSearch   = xSearch[r][i];
+      if (xSearch[r][i] < xMinSearch[r])
+        xMinSearch[r]   = xSearch[r][i];
     
-      if (ySearch[r][i] < yMin)
-        yMinSearch   = ySearch[r][i];
+      if (ySearch[r][i] < yMinSearch[r])
+        yMinSearch[r]   = ySearch[r][i];
       
-      if (zSearch[r][i] < zMin) 
-        zMinSearch   = zSearch[r][i];
+      if (zSearch[r][i] < zMinSearch[r]) 
+        zMinSearch[r]   = zSearch[r][i];
       
-      if (xSearch[r][i] > xMax) 
-        xMaxSearch   = xSearch[r][i];
+      if (xSearch[r][i] > xMaxSearch[r]) 
+        xMaxSearch[r]   = xSearch[r][i];
       
-      if (ySearch[r][i] > yMax) 
-        yMaxSearch   = ySearch[r][i];
+      if (ySearch[r][i] > yMaxSearch[r]) 
+        yMaxSearch[r]   = ySearch[r][i];
       
-      if (zSearch[r][i] > zMax)
-        zMaxSearch   = zSearch[r][i];       
+      if (zSearch[r][i] > zMaxSearch[r])
+        zMaxSearch[r]   = zSearch[r][i];       
           
-      if (colDum < colMinSearch)
-        colMinSearch = colDum;
+      if (colDum < colMinSearch[r])
+        colMinSearch[r] = colDum;
     
-      if (colDum > colMaxSearch)
-        colMaxSearch = colDum;
+      if (colDum > colMaxSearch[r])
+        colMaxSearch[r] = colDum;
     
-      if (lonDum < lonMinSearch)
-        lonMinSearch = lonDum;
+      if (lonDum < lonMinSearch[r])
+        lonMinSearch[r] = lonDum;
     
-      if (lonDum > lonMaxSearch)
-        lonMaxSearch = lonDum;
+      if (lonDum > lonMaxSearch[r])
+        lonMaxSearch[r] = lonDum;
       
-      if (radDum > radMaxSearch)
-        radMaxSearch = radDum;
+      if (radDum > radMaxSearch[r])
+        radMaxSearch[r] = radDum;
       
-      if (radDum < radMinSearch)
-        radMinSearch = radDum;
+      if (radDum < radMinSearch[r])
+        radMinSearch[r] = radDum;
 
                   
     }

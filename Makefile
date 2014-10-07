@@ -10,6 +10,7 @@ OBJECTS		= \
 	./obj/exodus_file.o \
 	./obj/ses3d.o \
 	./obj/model_file.o \
+	./obj/mesh.o \
 	./obj/utilities.o \
 	./obj/kdtree.o
 	

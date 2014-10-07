@@ -52,9 +52,12 @@ class rotation_matrix;
 class exodus_file;
 class model;
 class ses3d;
+class mesh;
 
 
 class model {
+  
+  friend class mesh;
 
 protected:
   
@@ -92,27 +95,28 @@ protected:
   vector<vector<double>> vsi, vpi;  
   
   // KD-trees.
-  std::vector<std::vector<kdtree*>> trees;  
+  std::vector<kdtree*> trees;  
   std::vector<std::vector<int>> datKD;
   
   // Rotation parameters.
   double angle, xRot, yRot, zRot;
   
   // Model extremes [physical].
-  double xMin, yMin, zMin;
-  double xMax, yMax, zMax;
+  std::vector<double> xMin, yMin, zMin;
+  std::vector<double> xMax, yMax, zMax;
+  std::vector<double> lonMin, lonMax;
+  std::vector<double> colMin, colMax;
+  std::vector<double> rMax, rMin;  
+
   double xCtr, yCtr, zCtr;  
-  double lonMin, lonMax;
-  double colMin, colMax;
-  double rMax, rMin;  
   
   // Model extremes [rotated].
-  double xMinSearch, yMinSearch, zMinSearch;
-  double xMaxSearch, yMaxSearch, zMaxSearch;  
-  double xCtrSearch, yCtrSearch, zCtrSearch;  
-  double lonMinSearch, lonMaxSearch, radMaxSearch;
-  double colMinSearch, colMaxSearch, radMinSearch;
-  
+  std::vector<double> xMinSearch, yMinSearch, zMinSearch;
+  std::vector<double> xMaxSearch, yMaxSearch, zMaxSearch;  
+  std::vector<double> lonMinSearch, lonMaxSearch, radMaxSearch;
+  std::vector<double> colMinSearch, colMaxSearch, radMinSearch;
+
+  double xCtrSearch, yCtrSearch, zCtrSearch;    
 
   virtual void read  (void) =0;
   virtual void write (void) =0;
@@ -125,7 +129,7 @@ protected:
   void findBoundingBox  ();
   void findMinMaxRadius ();
   
-  bool testBoundingBox  (double x, double y, double z);
+  int testBoundingBox  (double x, double y, double z);
 
 };
 
@@ -151,9 +155,38 @@ protected:
       
 };
 
+
+class mesh {
+
+  friend class exodus_file;
+  friend class model;
+  
+public:
+  
+  mesh (exodus_file &);  
+  
+  void dump        (exodus_file &);
+  void interpolate (model &);
+  
+
+protected:
+  
+  // co-ordinates.
+  std::vector<double> x, y, z;  
+  
+  // Elastic moduli.
+  std::vector<double> c11, c12, c13, c14, c15, c16;
+  std::vector<double> c22, c23, c24, c25, c26, c33;
+  std::vector<double> c34, c35, c36, c44, c45, c46;
+  std::vector<double> c55, c56, c66;
+    
+};
+
 class exodus_file {
   
-private:
+  friend class mesh;
+  
+protected:
   
   // define read/write characteristics for exodus files.
   float vers  = 0;
@@ -165,9 +198,9 @@ private:
   int ier     = 0;
   
   // misc. mesh details.
-  size_t numNodes;
-  size_t numElem;
-  size_t numElemBlock;
+  int numNodes;
+  int numElem;
+  int numElemBlock;
   const size_t numNodePerElem=4;
   
   // bookkeeping arrays.
@@ -178,8 +211,9 @@ private:
   
   // initialize with dummy filename for safety.
   std::string fileName;
-  
+    
   // internal private functions.
+  void getXYZ (std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
   void exodusCheck      (int, std::string);
   void getInfo          ();
   void allocate         ();
@@ -188,10 +222,13 @@ private:
   void openFile         ();  
   void closeFile        ();
   void getConnectivity  ();
-  
+      
   int getNumElemInBlock (int &elmBlockId);
+  std::vector<double> getVariable (std::string varName);
   
-    
+  void writeVariable (std::vector<double> &var, std::string varName);
+
+      
 public:
   
   // Constructor.
