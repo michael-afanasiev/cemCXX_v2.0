@@ -23,21 +23,26 @@ void error             (std::string);
 void intensivePrint    (std::string);
 
 // MPI helper functions.
-void broadcast2DVector (std::vector<std::vector<float>>&);
+void broadcast2DVector (std::vector<std::vector<double>>&);
 void broadcast1DVector (std::vector<int>&);
 void broadcastInteger  (size_t &);
 void broadcastInteger  (int &);
 int  getRank           ();
 
 // Math functions
-float deg2Rad                      (float &deg);
-float rad2Deg                      (float &rad);
-float getRadius                    (float &x, float &y, float &z);
-float projWonV_Dist                (float &x, float &y, float &z, std::vector<float> &v, 
-                                    std::vector<float> &x0);
+double deg2Rad                      (double &deg);
+double rad2Deg                      (double &rad);
+double getRadius                    (double &x, double &y, double &z);
+double projWonV_Dist                (double &x, double &y, double &z, std::vector<double> &v, 
+                                    std::vector<double> &x0);
                                     
-std::vector<float> getNormalVector (std::vector<float> &A, std::vector<float> &B, 
-                                    std::vector<float> &C);
+void xyz2ColLonRad                 (double &x, double &y, double &z, double &col, double &lon, 
+                                    double &rad);                                                                          
+void colLonRad2xyz                 (double &x, double &y, double &z, double &col, double &lon, 
+                                    double &rad);                                      
+                                    
+std::vector<double> getNormalVector (std::vector<double> &A, std::vector<double> &B, 
+                                    std::vector<double> &C);
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
@@ -62,35 +67,36 @@ protected:
   std::vector<int> regionSize;
   
   // Spherical co-ordinate data.
-  std::vector<std::vector<float>> col, lon, rad;
+  std::vector<std::vector<double>> col, lon, rad;
   
   // Cartesian co-ordinate data.
-  std::vector<std::vector<float>> x, y, z;
+  std::vector<std::vector<double>> x, y, z;
     
   // Elastic moduli.
-  std::vector<std::vector<float>> c11, c12, c13, c14, c15, c16;
-  std::vector<std::vector<float>> c22, c23, c24, c25, c26, c33;
-  std::vector<std::vector<float>> c34, c35, c36, c44, c45, c46;
-  std::vector<std::vector<float>> c55, c56, c66;
+  std::vector<std::vector<double>> c11, c12, c13, c14, c15, c16;
+  std::vector<std::vector<double>> c22, c23, c24, c25, c26, c33;
+  std::vector<std::vector<double>> c34, c35, c36, c44, c45, c46;
+  std::vector<std::vector<double>> c55, c56, c66;
   
   // density.
-  vector<vector<float>> rho;
+  vector<vector<double>> rho;
 
   // subset parameters.
-  vector<vector<float>> vsv, vsh, vpv, vph;    
-  vector<vector<float>> vsi, vpi;  
+  vector<vector<double>> vsv, vsh, vpv, vph;    
+  vector<vector<double>> vsi, vpi;  
   
   // KD-trees.
   std::vector<std::vector<kdtree*>> trees;  
   std::vector<std::vector<int>> datKD;
   
   // Rotation parameters.
-  float angle, xRot, yRot, zRot;
+  double angle, xRot, yRot, zRot;
   
   // Model extremes.
-  float xMin, yMin, zMin;
-  float xMax, yMax, zMax;
-  float rMax, rMin;
+  double xMin, yMin, zMin;
+  double xMax, yMax, zMax;
+  double xCtr, yCtr, zCtr;
+  double rMax, rMin;
 
   virtual void read  (void) =0;
   virtual void write (void) =0;
@@ -118,7 +124,7 @@ protected:
   void read  (void);
   void write (void) {};
   
-  void readFile          (std::vector<std::vector<float>> &vec, std::string type);
+  void readFile          (std::vector<std::vector<double>> &vec, std::string type);
   void broadcast         ();
   void convert2Cartesian ();
   void convert2Radians   ();
@@ -142,7 +148,7 @@ private:
   size_t numNodes;
   size_t numElem;
   size_t numElemBlock;
-  const int numNodePerElem=4;
+  const size_t numNodePerElem=4;
   
   // bookkeeping arrays.
   int *nodeNumMap;
@@ -181,13 +187,13 @@ class rotation_matrix {
 
 public:
   
-  rotation_matrix (float &ang, float &x, float &y, float &z);
-  void rotate     (float &x,    float &y,    float &z,
-                   float &xNew, float &yNew, float &zNew);
+  rotation_matrix (double &ang, double &x, double &y, double &z);
+  void rotate     (double &x,    double &y,    double &z,
+                   double &xNew, double &yNew, double &zNew);
   
 private:
   
-  float rot11, rot12, rot13, rot21, rot22, rot23;
-  float rot31, rot32, rot33;
+  double rot11, rot12, rot13, rot21, rot22, rot23;
+  double rot31, rot32, rot33;
 
 };

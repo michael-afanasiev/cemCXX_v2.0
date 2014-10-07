@@ -2,7 +2,7 @@
 
 using namespace std;
 
-rotation_matrix::rotation_matrix (float &a, float &x, float &y, float&z) {
+rotation_matrix::rotation_matrix (double &a, double &x, double &y, double&z) {
 
   rot11 = cos(a) + (x * x) * (1 - cos(a));
   rot21 = z * sin(a) + x * y * (1 - cos(a));
@@ -19,12 +19,12 @@ rotation_matrix::rotation_matrix (float &a, float &x, float &y, float&z) {
 
 }
 
-void rotation_matrix::rotate (float &xOld, float &yOld, float &zOld,
-                              float &xNew, float &yNew, float &zNew) {
+void rotation_matrix::rotate (double &xOld, double &yOld, double &zOld,
+                              double &xNew, double &yNew, double &zNew) {
                            
-  float xTmp = rot11 * xOld + rot21 * yOld + rot31 * zOld;
-  float yTmp = rot12 * xOld + rot22 * yOld + rot32 * zOld;
-  float zTmp = rot13 * xOld + rot23 * yOld + rot33 * zOld;
+  double xTmp = rot11 * xOld + rot21 * yOld + rot31 * zOld;
+  double yTmp = rot12 * xOld + rot22 * yOld + rot32 * zOld;
+  double zTmp = rot13 * xOld + rot23 * yOld + rot33 * zOld;
   
   xNew = xTmp;
   yNew = yTmp;
@@ -32,15 +32,15 @@ void rotation_matrix::rotate (float &xOld, float &yOld, float &zOld,
 
 }
 
-std::vector<float> getNormalVector (std::vector<float> &A,
-                                    std::vector<float> &B,
-                                    std::vector<float> &C) {
+std::vector<double> getNormalVector (std::vector<double> &A,
+                                     std::vector<double> &B,
+                                     std::vector<double> &C) {
                                       
    // Gets the normal vector to 3 points in 3-dimensions.
                                       
-  std::vector<float> AB;
-  std::vector<float> AC;
-  std::vector<float> n;
+  std::vector<double> AB;
+  std::vector<double> AC;
+  std::vector<double> n;
   
   AB.resize (3);
   AC.resize (3);
@@ -58,7 +58,7 @@ std::vector<float> getNormalVector (std::vector<float> &A,
   n[1] = AB[0] * AC[2] - AB[2] * AC[0] * (-1);
   n[2] = AB[0] * AC[1] - AB[1] * AC[0];
   
-  float magnitude = sqrt (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+  double magnitude = sqrt (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
   n[0] = n[0] / magnitude;
   n[1] = n[1] / magnitude;
   n[2] = n[2] / magnitude;
@@ -67,27 +67,43 @@ std::vector<float> getNormalVector (std::vector<float> &A,
   
 }
 
-float projWonV_Dist (float &x, float &y, float&z, std::vector<float> &v, std::vector<float> &x0) {
+void xyz2ColLonRad (double &x, double &y, double &z, double &col, double &lon, double &rad) {
+
+  rad = getRadius (x, y, z);
+  col = acos (z / rad);
+  lon = atan2 (y, x);
+
+}
+
+void colLonRad2xyz (double &x, double &y, double &z, double &col, double &lon, double &rad) {
+  
+  x = rad * cos (lon) * sin (col);
+  y = rad * sin (lon) * sin (col);
+  z = rad * cos (col);
+  
+}
+
+double projWonV_Dist (double &x, double &y, double&z, std::vector<double> &v, std::vector<double> &x0) {
   
   // Projects a vector x - x0 onto the plane v.
   
-  float dotVW = v[0] * (x-x0[0]) + v[1] * (y-x0[1]) + v[2] * (z - x0[2]);
-  float magV  = sqrt (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+  double dotVW = v[0] * (x-x0[0]) + v[1] * (y-x0[1]) + v[2] * (z - x0[2]);
+  double magV  = sqrt (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
   
   return dotVW / magV;
   
 }
 
-float deg2Rad (float &deg) {
+double deg2Rad (double &deg) {
   
-  float rad = deg * M_PI / 180.;
+  double rad = deg * M_PI / 180.;
   return rad;
   
 }
 
-float rad2Deg (float &rad) {
+double rad2Deg (double &rad) {
   
-  float deg = rad * 180. / M_PI;
+  double deg = rad * 180. / M_PI;
   return deg;
   
 }
@@ -136,8 +152,8 @@ void broadcast1DVector (vector<int> &bVector) {
   
 }
 
-void broadcast2DVector (vector<vector<float>> &bVector) {  
-  vector<vector<float>>::iterator outer;
+void broadcast2DVector (vector<vector<double>> &bVector) {  
+  vector<vector<double>>::iterator outer;
   bool broadcast=true;
   if (MPI::COMM_WORLD.Get_rank () == 0)
     if (bVector.empty ())
@@ -160,12 +176,12 @@ void broadcast2DVector (vector<vector<float>> &bVector) {
         size = axesSize[i];
       }      
       MPI::COMM_WORLD.Bcast (&size, 1, MPI::INT, 0);      
-      float *recvBuf = new float [size];
+      double *recvBuf = new double [size];
       if (MPI::COMM_WORLD.Get_rank () > 0)
         bVector[i].resize (size);
       if (MPI::COMM_WORLD.Get_rank () == 0)
         std::copy (bVector[i].begin (), bVector[i].end(), recvBuf);      
-      MPI::COMM_WORLD.Bcast (&recvBuf[0], size, MPI::FLOAT, 0);      
+      MPI::COMM_WORLD.Bcast (&recvBuf[0], size, MPI::DOUBLE, 0);      
       if (MPI::COMM_WORLD.Get_rank () > 0) 
         std::copy (recvBuf, recvBuf+size, bVector[i].begin ());      
       delete [] recvBuf;      
@@ -173,9 +189,9 @@ void broadcast2DVector (vector<vector<float>> &bVector) {
   }  
 }
 
-float getRadius (float &x, float &y, float &z) {
+double getRadius (double &x, double &y, double &z) {
   
-  float rad = sqrt (x*x + y*y + z*z);
+  double rad = sqrt (x*x + y*y + z*z);
   return rad;
   
 }

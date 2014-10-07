@@ -65,7 +65,7 @@ void model::findMinMaxRadius () {
     size_t numParams = x[r].size();
     for (size_t i=0; i<numParams; i++) {
       
-      float rad = getRadius (x[r][i], y[r][i], z[r][i]);
+      double rad = getRadius (x[r][i], y[r][i], z[r][i]);
       
       if (rad < rMin)
         rMin = rad;
@@ -85,11 +85,16 @@ void model::findMinMaxCartesian () {
   
   xMin = x[0][0]; yMin = y[0][0]; zMin = z[0][0];
   xMax = x[0][0]; yMax = y[0][0]; zMax = z[0][0];
+  xCtr = 0; yCtr = 0; zCtr = 0;
   
   for (size_t r=0; r<numModelRegions; r++) {
     
     size_t numParams = x[r].size();
     for (size_t i=0; i<numParams; i++) {
+      
+      xCtr += x[r][i];
+      yCtr += y[r][i];
+      zCtr += z[r][i];
       
       if (x[r][i] < xMin) {
         xMin     = x[r][i];
@@ -116,6 +121,16 @@ void model::findMinMaxCartesian () {
       }
       
     }
+    
+    xCtr = xCtr / numParams;
+    yCtr = yCtr / numParams;
+    zCtr = zCtr / numParams;
+    
+    double col, lon, rad;
+    xyz2ColLonRad (xCtr, yCtr, zCtr, col, lon, rad);
+    cout << rad2Deg (lon) << ' ' << rad << endl;    
+    
   }
+  
   
 }

@@ -10,10 +10,11 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   path   = pathIn;
   symSys = symSysIn;
   
-  float deg=57.5;
+  // double deg=57.5;
+  double deg = 0.;
   angle = deg2Rad (deg);
   xRot = 0.;
-  yRot = 1.;
+  yRot = 0.;
   zRot = 0.;
   
   read                ();
@@ -74,7 +75,7 @@ void ses3d::read () {
 
 void ses3d::convert2Radians () {
   
-  vector<float>::iterator it;
+  vector<double>::iterator it;
   
   size_t k=0;
   for (size_t i=0; i<numModelRegions; i++) {
@@ -82,16 +83,18 @@ void ses3d::convert2Radians () {
     k = 0;
     for (it=col[i].begin(); it!=col[i].end(); ++it) {
       
-      float tmp = deg2Rad (*it);
+      double tmp = deg2Rad (*it);
       col[i][k] = tmp;
+      k++;
       
     }
    
     k = 0;
     for (it=lon[i].begin(); it!=lon[i].end(); ++it) {
       
-      float tmp = deg2Rad (*it);
+      double tmp = deg2Rad (*it);
       lon[i][k] = tmp;
+      k++;
       
     }
   }  
@@ -115,11 +118,11 @@ void ses3d::broadcast () {
           
 }
 
-void ses3d::readFile (vector<vector<float>> &vec, string type) {
+void ses3d::readFile (vector<vector<double>> &vec, string type) {
   
   std::string line;
   std::string fileName;
-  std::vector<std::vector<float>> dummy;
+  std::vector<std::vector<double>> dummy;
   
   if (type == "colatitude")
     fileName = path + "/block_x";
@@ -208,8 +211,8 @@ void ses3d::convert2Cartesian () {
   
   intensivePrint ("Converting to cartesian co-ordinates.");
   
-  vector<vector<float>>::iterator outer;
-  vector<float>::iterator colIter, lonIter, radIter;
+  vector<vector<double>>::iterator outer;
+  vector<double>::iterator colIter, lonIter, radIter;
   
   if (col.empty ())
     error ("No spherical co-ordinate arrays stored. Are you sure you read them in?");
@@ -228,18 +231,16 @@ void ses3d::convert2Cartesian () {
     
     size_t k=0;
     
-    int numParams = col[i].size () * lon[i].size() * rad[i].size ();
+    size_t numParams = col[i].size () * lon[i].size() * rad[i].size ();
     x[i].resize (numParams);
     y[i].resize (numParams);
     z[i].resize (numParams);
     
-    for (colIter=col[i].begin(); colIter!=col[i].end(); ++colIter) {
+    for (colIter=col[i].begin(); colIter!=col[i].end(); ++colIter) {      
       for (lonIter=lon[i].begin(); lonIter!=lon[i].end(); ++lonIter) {
         for (radIter=rad[i].begin(); radIter!=rad[i].end(); ++radIter) {
           
-          x[i][k] = *radIter * cos (*lonIter) * sin (*colIter);
-          y[i][k] = *radIter * sin (*lonIter) * sin (*colIter);
-          z[i][k] = *radIter * cos (*colIter);
+          colLonRad2xyz (x[i][k], y[i][k], z[i][k], *colIter, *lonIter, *radIter);
           k++;
           
         }
