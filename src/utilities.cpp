@@ -36,7 +36,7 @@ std::vector<float> getNormalVector (std::vector<float> &A,
                                     std::vector<float> &B,
                                     std::vector<float> &C) {
                                       
-   // Gets the normal vector to 3 points in 3-dimensions. Used to determine the equation of a plane.
+   // Gets the normal vector to 3 points in 3-dimensions.
                                       
   std::vector<float> AB;
   std::vector<float> AC;
@@ -99,6 +99,12 @@ int getRank () {
   
 }
 
+void broadcastInteger (size_t &bInt) {
+  
+  MPI::COMM_WORLD.Bcast (&bInt, 1, MPI::UNSIGNED, 0);
+  
+}
+
 void broadcastInteger (int &bInt) {
   
   MPI::COMM_WORLD.Bcast (&bInt, 1, MPI::INT, 0);
@@ -139,7 +145,7 @@ void broadcast2DVector (vector<vector<float>> &bVector) {
   MPI::COMM_WORLD.Bcast (&broadcast, 1, MPI::BOOL, 0);  
   if (broadcast) {
     vector<int> axesSize;
-    int containerSize = bVector.size();
+    size_t containerSize = bVector.size();
     MPI::COMM_WORLD.Bcast (&containerSize, 1, MPI::INT, 0);    
     if (MPI::COMM_WORLD.Get_rank () > 0)
       bVector.resize (containerSize);    

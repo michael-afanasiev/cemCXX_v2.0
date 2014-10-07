@@ -12,7 +12,7 @@ void model::createKDtree () {
   for (size_t r=0; r<numModelRegions; r++) {
     
     kdtree *tree  = kd_create (3);
-    int numParams = x[r].size ();
+    size_t numParams = x[r].size ();
     datKD[r].resize (numParams);
 
     for (size_t i=0; i<numParams; i++) {
@@ -38,7 +38,7 @@ void model::rotate () {
     
     for (size_t r=0; r<numModelRegions; r++) {
 
-      int numParams = x[r].size ();
+      size_t numParams = x[r].size ();
       for (size_t i=0; i<numParams; i++) {
       
         rotMatrix.rotate (x[r][i], y[r][i], z[r][i], x[r][i], y[r][i], z[r][i]);
@@ -62,7 +62,7 @@ void model::findMinMaxRadius () {
   
   for (size_t r=0; r<numModelRegions; r++) {
     
-    int numParams = x[r].size();
+    size_t numParams = x[r].size();
     for (size_t i=0; i<numParams; i++) {
       
       float rad = getRadius (x[r][i], y[r][i], z[r][i]);
@@ -88,7 +88,7 @@ void model::findMinMaxCartesian () {
   
   for (size_t r=0; r<numModelRegions; r++) {
     
-    int numParams = x[r].size();
+    size_t numParams = x[r].size();
     for (size_t i=0; i<numParams; i++) {
       
       if (x[r][i] < xMin) {

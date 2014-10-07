@@ -10,7 +10,6 @@ int main () {
   if (MPI::COMM_WORLD.Get_rank () == 0)
   exodus_file exo ("col000-090.lon000-090.rad6361-6371.000.ex2");
   
-  
   MPI::Finalize ();
   
 }

@@ -11,12 +11,12 @@ using namespace std;
 // ###### misc. utilities. ######
 
 // Colour codes for pretty writes.
-static const char *rst = "\x1b[0m";
-static const char *red = "\x1b[31m";
-static const char *grn = "\x1b[32m";
-static const char *yel = "\x1b[33m";
-static const char *mgn = "\x1b[35m";
-static const char *blu = "\x1b[36m";
+const std::string rst = "\x1b[0m";
+const std::string red = "\x1b[31m";
+const std::string grn = "\x1b[32m";
+const std::string yel = "\x1b[33m";
+const std::string mgn = "\x1b[35m";
+const std::string blu = "\x1b[36m";
 
 // Message helper functions.
 void error             (std::string);
@@ -25,14 +25,17 @@ void intensivePrint    (std::string);
 // MPI helper functions.
 void broadcast2DVector (std::vector<std::vector<float>>&);
 void broadcast1DVector (std::vector<int>&);
+void broadcastInteger  (size_t &);
 void broadcastInteger  (int &);
 int  getRank           ();
 
 // Math functions
-float deg2Rad (float &deg);
-float rad2Deg (float &rad);
-float getRadius (float &x, float &y, float &z);
-float projWonV_Dist (float &x, float &y, float &z, std::vector<float> &v, std::vector<float> &x0);
+float deg2Rad                      (float &deg);
+float rad2Deg                      (float &rad);
+float getRadius                    (float &x, float &y, float &z);
+float projWonV_Dist                (float &x, float &y, float &z, std::vector<float> &v, 
+                                    std::vector<float> &x0);
+                                    
 std::vector<float> getNormalVector (std::vector<float> &A, std::vector<float> &B, 
                                     std::vector<float> &C);
 
@@ -53,8 +56,8 @@ protected:
   int myRank;
   int worldSize;
   
-  int numModelParams=0;
-  int numModelRegions=0;
+  size_t numModelParams=0;
+  size_t numModelRegions=0;
   
   std::vector<int> regionSize;
   
@@ -100,7 +103,6 @@ protected:
 
 };
 
-
 class ses3d: public model {
   
 public:
@@ -116,15 +118,12 @@ protected:
   void read  (void);
   void write (void) {};
   
-  void broadcast         ();
   void readFile          (std::vector<std::vector<float>> &vec, std::string type);
+  void broadcast         ();
   void convert2Cartesian ();
   void convert2Radians   ();
-  
-  
-  
+      
 };
-
 
 class exodus_file {
   
@@ -140,9 +139,9 @@ private:
   int ier     = 0;
   
   // misc. mesh details.
-  int numNodes;
-  int numElem;
-  int numElemBlock;
+  size_t numNodes;
+  size_t numElem;
+  size_t numElemBlock;
   const int numNodePerElem=4;
   
   // bookkeeping arrays.
