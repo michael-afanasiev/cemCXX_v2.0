@@ -34,15 +34,15 @@ double deg2Rad                      (double &deg);
 double rad2Deg                      (double &rad);
 double getRadius                    (double &x, double &y, double &z);
 double projWonV_Dist                (double &x, double &y, double &z, std::vector<double> &v, 
-                                    std::vector<double> &x0);
+                                     std::vector<double> &x0);
                                     
-void xyz2ColLonRad                 (double &x, double &y, double &z, double &col, double &lon, 
-                                    double &rad);                                                                          
-void colLonRad2xyz                 (double &x, double &y, double &z, double &col, double &lon, 
-                                    double &rad);                                      
+void xyz2ColLonRad                  (double &x, double &y, double &z, double &col, double &lon, 
+                                     double &rad);                                                                          
+void colLonRad2xyz                  (double &x, double &y, double &z, double &col, double &lon, 
+                                     double &rad);                                      
                                     
 std::vector<double> getNormalVector (std::vector<double> &A, std::vector<double> &B, 
-                                    std::vector<double> &C);
+                                     std::vector<double> &C);
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
@@ -71,6 +71,12 @@ protected:
   
   // Cartesian co-ordinate data.
   std::vector<std::vector<double>> x, y, z;
+  
+  // Arrays to hold rotated co-ordinates.
+  std::vector<std::vector<double>> xSearch, ySearch, zSearch;
+  
+  // Rotation matrices for bounding box calculation.
+  rotation_matrix *rotateToYZ, *rotateToXY;
     
   // Elastic moduli.
   std::vector<std::vector<double>> c11, c12, c13, c14, c15, c16;
@@ -92,20 +98,34 @@ protected:
   // Rotation parameters.
   double angle, xRot, yRot, zRot;
   
-  // Model extremes.
+  // Model extremes [physical].
   double xMin, yMin, zMin;
   double xMax, yMax, zMax;
-  double xCtr, yCtr, zCtr;
-  double rMax, rMin;
+  double xCtr, yCtr, zCtr;  
+  double lonMin, lonMax;
+  double colMin, colMax;
+  double rMax, rMin;  
+  
+  // Model extremes [rotated].
+  double xMinSearch, yMinSearch, zMinSearch;
+  double xMaxSearch, yMaxSearch, zMaxSearch;  
+  double xCtrSearch, yCtrSearch, zCtrSearch;  
+  double lonMinSearch, lonMaxSearch, radMaxSearch;
+  double colMinSearch, colMaxSearch, radMinSearch;
+  
 
   virtual void read  (void) =0;
   virtual void write (void) =0;
   
-  void createKDtree        ();
-  void rotate              ();
-  void findMinMax          ();
-  void findMinMaxCartesian ();
-  void findMinMaxRadius    ();
+  void rotate           ();
+  void findMinMax       ();
+  void createKDtree     ();
+  void findMinMaxRot    ();
+  void findMinMaxPhys   ();
+  void findBoundingBox  ();
+  void findMinMaxRadius ();
+  
+  bool testBoundingBox  (double x, double y, double z);
 
 };
 

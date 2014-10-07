@@ -10,7 +10,6 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   path   = pathIn;
   symSys = symSysIn;
   
-  // double deg=57.5;
   double deg = 0.;
   angle = deg2Rad (deg);
   xRot = 0.;
@@ -22,10 +21,12 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   convert2Radians     ();
   convert2Cartesian   ();
   rotate              ();
-  findMinMaxCartesian ();
+  findMinMaxPhys      ();
   findMinMaxRadius    ();
   createKDtree        ();  
-    
+  findBoundingBox     ();
+  findMinMaxRot       ();
+      
 }
 
 void ses3d::read () {
