@@ -153,6 +153,12 @@ void exodus_file::getConnectivity () {
   
 }
 
+std::vector<int> exodus_file::returnConnectivity () {
+  
+  return connectivity;
+  
+}
+
 void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y, 
                           std::vector<double> &z) {
   

@@ -39,7 +39,13 @@ double projWonV_Dist                (double &x, double &y, double &z, std::vecto
 void xyz2ColLonRad                  (double &x, double &y, double &z, double &col, double &lon, 
                                      double &rad);                                                                          
 void colLonRad2xyz                  (double &x, double &y, double &z, double &col, double &lon, 
-                                     double &rad);                                      
+                                     double &rad); 
+                                     
+bool testInsideTet                  (vector<double> &v0, 
+                                     vector<double> &v1, 
+                                     vector<double> &v2, 
+                                     vector<double> &v3,
+                                     vector<double> &p0);
                                     
 std::vector<double> getNormalVector (std::vector<double> &A, std::vector<double> &B, 
                                      std::vector<double> &C);
@@ -179,7 +185,11 @@ protected:
   std::vector<double> c22, c23, c24, c25, c26, c33;
   std::vector<double> c34, c35, c36, c44, c45, c46;
   std::vector<double> c55, c56, c66;
+  
+  std::vector<int> connectivity;
     
+  // misc. mesh details.
+  const size_t numNodePerElem=4;
 };
 
 class exodus_file {
@@ -225,6 +235,7 @@ protected:
       
   int getNumElemInBlock (int &elmBlockId);
   std::vector<double> getVariable (std::string varName);
+  std::vector<int> returnConnectivity ();
   
   void writeVariable (std::vector<double> &var, std::string varName);
 

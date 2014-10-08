@@ -29,6 +29,61 @@ void rotation_matrix::rotate (double &xOld, double &yOld, double &zOld,
 
 }
 
+bool testInsideTet (vector<double> &v0, 
+                    vector<double> &v1, 
+                    vector<double> &v2, 
+                    vector<double> &v3,
+                    vector<double> &p0) {
+                      
+                      
+  double x1 = v0[0]; double y1 = v0[1]; double z1 = v0[2];
+  double x2 = v1[0]; double y2 = v1[1]; double z2 = v1[2];
+  double x3 = v2[0]; double y3 = v2[1]; double z3 = v2[2];
+  double x4 = v3[0]; double y4 = v3[1]; double z4 = v3[2];
+  double xp = p0[0]; double yp = p0[1]; double zp = p0[2];
+                      
+  double vecX = xp - x4;
+  double vecY = yp - y4;
+  double vecZ = zp - z4;
+
+  double a = x1 - x4;
+  double d = y1 - y4;
+  double g = z1 - z4;
+  double b = x2 - x4;
+  double e = y2 - y4;
+  double h = z2 - z4;
+  double c = x3 - x4;
+  double f = y3 - y4;
+  double i = z3 - z4;
+  
+  double det = 1 / (( a * ( e * i - f * h ) ) - ( b * ( i * d - f * g ) ) +
+    ( c * ( d * h - e * g ) ));
+  
+  double ai = det * (e * i - f * h);
+  double bi = det * (d * i - f * g) * (-1);
+  double ci = det * (d * h - e * g);
+  double di = det * (b * i - c * h) * (-1);
+  double ei = det * (a * i - c * g);
+  double fi = det * (a * h - b * g) * (-1);
+  double gi = det * (b * f - c * e);
+  double hi = det * (a * f - c * d) * (-1);
+  double ii = det * (a * e - b * d);
+  
+  double l1 = ai * vecX + di * vecY + gi * vecZ;
+  double l2 = bi * vecX + ei * vecY + hi * vecZ;
+  double l3 = ci * vecX + fi * vecY + ii * vecZ;
+  double l4 = 1 - l1 - l2 - l3;
+  
+  // cout << l1 << " " << l2 << " " << l3 << " " << l4 << endl;
+  
+  if (l1 >= 0 && l2 >= 0 && l3 >= 0 && l4 >= 0) {
+    return true;
+  } else {
+    return false;
+  }
+                      
+}
+
 std::vector<double> getNormalVector (std::vector<double> &A,
                                      std::vector<double> &B,
                                      std::vector<double> &C) {
