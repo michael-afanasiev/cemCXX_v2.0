@@ -186,10 +186,18 @@ protected:
   std::vector<double> c34, c35, c36, c44, c45, c46;
   std::vector<double> c55, c56, c66;
   
+  // connectivity array.
   std::vector<int> connectivity;
+  
+  // node number map.
+  std::vector<int> nodeNumMap;
+  
+  // bool array for region finding.
+  std::vector<bool> contains;
     
   // misc. mesh details.
   const size_t numNodePerElem=4;
+  int numNodes;
 };
 
 class exodus_file {
@@ -214,10 +222,11 @@ protected:
   const size_t numNodePerElem=4;
   
   // bookkeeping arrays.
-  int *nodeNumMap;
+  std::vector<int> nodeNumMap;
   int *elemNumMap;
   int *blockNumMap;
-  std::vector<int> connectivity;
+  std::vector<int>  connectivity;
+  std::vector<bool> contains;
   
   // initialize with dummy filename for safety.
   std::string fileName;
@@ -232,10 +241,13 @@ protected:
   void openFile         ();  
   void closeFile        ();
   void getConnectivity  ();
+  void getNames         ();
       
   int getNumElemInBlock (int &elmBlockId);
   std::vector<double> getVariable (std::string varName);
   std::vector<int> returnConnectivity ();
+  std::vector<int> returnNodeNumMap   ();
+  std::vector<bool> returnContains ();
   
   void writeVariable (std::vector<double> &var, std::string varName);
 

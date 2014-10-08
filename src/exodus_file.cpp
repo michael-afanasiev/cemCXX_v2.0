@@ -17,6 +17,7 @@ exodus_file::exodus_file (std::string fname) {
   getNodeNumMap   ();
   getElemNumMap   ();  
   getConnectivity ();
+  getNames        ();
   
   printMeshInfo ();
   
@@ -28,7 +29,6 @@ exodus_file::~exodus_file () {
   
   closeFile ();
   delete [] elemNumMap;
-  delete [] nodeNumMap;
   
 }
 
@@ -84,7 +84,6 @@ void exodus_file::getInfo () {
 // Allocates mesh arrays.
 void exodus_file::allocate () {
   
-  nodeNumMap   = new int [numNodes];
   elemNumMap   = new int [numElem];
     
 }
@@ -93,8 +92,12 @@ void exodus_file::getNodeNumMap () {
 
   // Gets the saved node number map.
   
-  exodusCheck (ex_get_node_num_map (idexo, nodeNumMap), "ex_get_node_num_map");
-  
+  nodeNumMap.resize (numNodes);
+  int *scratch = new int [numNodes];
+  exodusCheck (ex_get_node_num_map (idexo, scratch), "ex_get_node_num_map");
+  std::copy (scratch, scratch+numNodes, nodeNumMap.begin ());
+  delete [] scratch;
+    
 }
 
 void exodus_file::getElemNumMap () {
@@ -122,6 +125,45 @@ int exodus_file::getNumElemInBlock (int &elmBlockId) {
     
 }
 
+std::vector<bool> exodus_file::returnContains () {
+  
+  return contains;
+  
+}
+
+void exodus_file::getNames () {
+  
+  std::string regionName          = "Japan";
+  contains.resize     (numElem*numNodePerElem);  
+  vector<bool>::iterator nextBool = contains.begin();
+  
+  // Reserve space for the array of element names.
+  char *nameDum[numElemBlock];
+  for (size_t i=0; i<numElemBlock; i++) {
+    nameDum[i] = new char [MAX_LINE_LENGTH+1];
+  }
+    
+  // Get element block names.
+  exodusCheck (ex_get_names (idexo, EX_ELEM_BLOCK, nameDum), "ex_get_names");
+  
+  for (size_t i=0; i<numElemBlock; i++) {
+    
+    int numElemThisBlock = getNumElemInBlock (blockNumMap[i]);
+  
+    // Set contains array.
+    if (strcmp (nameDum[i], regionName.c_str ()) == 0) {
+      std::fill (nextBool, nextBool+numElemThisBlock*numNodePerElem, true);
+    } else {
+      std::fill (nextBool, nextBool+numElemThisBlock*numNodePerElem, false);      
+    }
+  
+    // advance the nextbool iterator.
+    nextBool = nextBool + numElemThisBlock * numNodePerElem + 1;    
+
+  }
+
+}
+
 void exodus_file::getConnectivity () {
   
   // Gets the connectivty array. Merges the connectivity arrays from each block into one master
@@ -133,9 +175,9 @@ void exodus_file::getConnectivity () {
   // Get element block ids.
   blockNumMap = new int [numElemBlock];
   exodusCheck (ex_get_elem_blk_ids (idexo, blockNumMap), "ex_get_elem_blk_ids");
-    
+      
   // Initialize the iterator which will be used to copy to master connectivity array.
-  vector<int>::iterator next=connectivity.begin();
+  vector<int>::iterator  next=connectivity.begin();
   for (size_t i=0; i<numElemBlock; i++) {
 
     // Initialze scratch array to pull from exodus file.
@@ -158,6 +200,13 @@ std::vector<int> exodus_file::returnConnectivity () {
   return connectivity;
   
 }
+
+std::vector<int> exodus_file::returnNodeNumMap () {
+  
+  return nodeNumMap;
+  
+}
+
 
 void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y, 
                           std::vector<double> &z) {
