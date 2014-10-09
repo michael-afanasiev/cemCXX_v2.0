@@ -2,13 +2,10 @@
 
 using namespace std;
 
-ses3d::ses3d (string pathIn, string symSysIn) {
+ses3d::ses3d () {
   
   myRank    = MPI::COMM_WORLD.Get_rank ();
   worldSize = MPI::COMM_WORLD.Get_size ();
-  
-  path   = pathIn;
-  symSys = symSysIn;
   
   double deg = 0.;
   angle = deg2Rad (deg);
@@ -16,6 +13,7 @@ ses3d::ses3d (string pathIn, string symSysIn) {
   yRot = 0.;
   zRot = 0.;
   
+  readParameterFile   ();
   read                ();
   broadcast           ();
   convert2Radians     ();
@@ -62,7 +60,8 @@ void ses3d::read () {
   
     } else if (symSys == "tti_noRho_isoVp") {
   
-      readFile (vpi, "vph");
+      readFile (vpv, "vpi");
+      readFile (vph, "vpi");
       readFile (vsv, "vsv");
       readFile (vsh, "vsh");
   
@@ -133,6 +132,8 @@ void ses3d::readFile (vector<vector<double>> &vec, string type) {
     fileName = path + "/block_z";    
   if (type == "rho")
     fileName = path + "/dRHO";
+  if (type == "vpi")
+    fileName = path + "/dVPP";
   if (type == "vpv")
     fileName = path + "/dVPP";
   if (type == "vph")

@@ -2,6 +2,40 @@
 
 using namespace std;
 
+void model::readParameterFile () {
+  
+  ifstream inputFile ("./mod/parameters.txt");
+  vector<string> paramName, paramValue;
+  string paramNameDum, paramValueDum;
+  
+  while (inputFile >> paramNameDum >> paramValueDum) {
+    
+    paramName.push_back  (paramNameDum);
+    paramValue.push_back (paramValueDum);
+    
+  }
+  
+  for (size_t i=0; i<paramName.size (); i++) {
+    
+    if (paramName[i] == "path")
+      path = paramValue[i];
+    
+    if (paramName[i] == "symmetry_system")
+      symSys = paramValue[i];
+    
+    if (paramName[i] == "interpolation_type")
+      interpolationType = paramValue[i];
+    
+    if (paramName[i] == "convert_to_1_second")
+      convert_to_1_second = paramValue[i];
+    
+    if (paramName[i] == "one_d_background")
+      onedBackground = paramValue[i];
+    
+  }  
+  
+}
+
 void model::createKDtree () {
   
   intensivePrint ("Creating KD-trees.");

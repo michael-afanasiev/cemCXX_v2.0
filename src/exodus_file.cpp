@@ -15,9 +15,9 @@ exodus_file::exodus_file (std::string fname) {
   getInfo         ();
   allocate        ();
   getNodeNumMap   ();
-  getElemNumMap   ();  
+  getElemNumMap   (); 
   getConnectivity ();
-  getNames        ();
+  getNodeSets     ();
   
   printMeshInfo ();
   
@@ -75,9 +75,23 @@ void exodus_file::getInfo () {
   float dum1;
   char  dum2;
   
-  exodusCheck (ex_inquire (idexo, EX_INQ_NODES,    &numNodes, &dum1, &dum2),"ex_inqure");
-  exodusCheck (ex_inquire (idexo, EX_INQ_ELEM,     &numElem, &dum1, &dum2),"ex_inquire");
-  exodusCheck (ex_inquire (idexo, EX_INQ_ELEM_BLK, &numElemBlock, &dum1, &dum2),"ex_inqure");
+  int dumNumElem;
+  int dumNumNodes;
+  int dumNodeSets;
+  int dumSideSets;
+  int dumElemBlock;
+  
+  exodusCheck (ex_inquire (idexo, EX_INQ_NODES,     &dumNumNodes,  &dum1, &dum2), "ex_inqure");
+  exodusCheck (ex_inquire (idexo, EX_INQ_ELEM,      &dumNumElem,   &dum1, &dum2), "ex_inquire");
+  exodusCheck (ex_inquire (idexo, EX_INQ_ELEM_BLK,  &dumElemBlock, &dum1, &dum2), "ex_inquire");
+  exodusCheck (ex_inquire (idexo, EX_INQ_NODE_SETS, &dumNodeSets,  &dum1, &dum2), "ex_inquire");
+  exodusCheck (ex_inquire (idexo, EX_INQ_SIDE_SETS, &dumSideSets,  &dum1, &dum2), "ex_inquire");
+  
+  numElem      = dumNumElem;
+  numNodes     = dumNumNodes;
+  numSideSets  = dumSideSets;
+  numNodeSets  = dumNodeSets;
+  numElemBlock = dumElemBlock;
   
 }
 
@@ -125,41 +139,57 @@ int exodus_file::getNumElemInBlock (int &elmBlockId) {
     
 }
 
-std::vector<bool> exodus_file::returnContains () {
+int exodus_file::getNumNodeInSet (int &nodeSetId) {
   
-  return contains;
+  int numNode;
+  int dum1;
+  
+  exodusCheck (ex_get_node_set_param (idexo, nodeSetId, &numNode, &dum1), 
+    "ex_get_node_set_param");
+    
+  return numNode;
   
 }
 
-void exodus_file::getNames () {
+std::vector<int> exodus_file::returnInterpolatingSet () {
+  
+  return interpolatingSet;
+  
+}
+
+void exodus_file::getNodeSets () {
   
   std::string regionName          = "Japan";
-  contains.resize     (numElem*numNodePerElem);  
-  vector<bool>::iterator nextBool = contains.begin();
   
-  // Reserve space for the array of element names.
-  char *nameDum[numElemBlock];
-  for (size_t i=0; i<numElemBlock; i++) {
+  // Reserve space for the array of nodeset names.
+  char *nameDum[numNodeSets];
+  for (size_t i=0; i<numNodeSets; i++) {
     nameDum[i] = new char [MAX_LINE_LENGTH+1];
   }
     
-  // Get element block names.
-  exodusCheck (ex_get_names (idexo, EX_ELEM_BLOCK, nameDum), "ex_get_names");
+  // Get node set ids.
+  nodeSetNumMap = new int [numNodeSets];
+  exodusCheck (ex_get_node_set_ids (idexo, nodeSetNumMap), "ex_get_node_set_ids");
   
-  for (size_t i=0; i<numElemBlock; i++) {
+  // Get node set names.
+  exodusCheck (ex_get_names (idexo, EX_NODE_SET, nameDum), "ex_get_names");
+  
+  // Determine which node set to get based on region name, and only read that nodeset in.    
+  for (size_t i=0; i<numNodeSets; i++) {
     
-    int numElemThisBlock = getNumElemInBlock (blockNumMap[i]);
-  
-    // Set contains array.
     if (strcmp (nameDum[i], regionName.c_str ()) == 0) {
-      std::fill (nextBool, nextBool+numElemThisBlock*numNodePerElem, true);
-    } else {
-      std::fill (nextBool, nextBool+numElemThisBlock*numNodePerElem, false);      
+      
+      int numNodeThisSet = getNumNodeInSet (nodeSetNumMap[i]);
+      
+      interpolatingSet.resize (numNodeThisSet);
+      int *scratch       = new int [numNodeThisSet];      
+      
+      exodusCheck (ex_get_node_set (idexo, nodeSetNumMap[i], scratch), "ex_get_node_set");
+      
+      std::copy (scratch, scratch+numNodeThisSet, interpolatingSet.begin ());
+      
     }
   
-    // advance the nextbool iterator.
-    nextBool = nextBool + numElemThisBlock * numNodePerElem + 1;    
-
   }
 
 }

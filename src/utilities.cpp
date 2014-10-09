@@ -244,6 +244,10 @@ void broadcast2DVector (vector<vector<double>> &bVector) {
 double getRadius (double &x, double &y, double &z) {
   
   double rad = sqrt (x*x + y*y + z*z);
+  
+  if (rad > 6371)
+    rad = 6371;
+  
   return rad;
   
 }
