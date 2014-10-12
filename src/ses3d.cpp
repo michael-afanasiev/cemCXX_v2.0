@@ -24,6 +24,7 @@ ses3d::ses3d () {
   createKDtree        ();  
   findBoundingBox     ();
   findMinMaxRot       ();
+  allocateArrays      ();
       
 }
 

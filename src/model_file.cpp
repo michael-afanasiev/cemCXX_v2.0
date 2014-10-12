@@ -32,8 +32,67 @@ void model::readParameterFile () {
     if (paramName[i] == "one_d_background")
       onedBackground = paramValue[i];
     
+    if (paramName[i] == "mesh_directory")
+      meshDirectory = paramValue[i];
+    
   }  
   
+}
+
+void model::allocateArrays () {
+  
+  c11.resize (numModelRegions);
+  c12.resize (numModelRegions);
+  c13.resize (numModelRegions);
+  c14.resize (numModelRegions);
+  c15.resize (numModelRegions);
+  c16.resize (numModelRegions);
+  c22.resize (numModelRegions);
+  c23.resize (numModelRegions);
+  c24.resize (numModelRegions);
+  c25.resize (numModelRegions);
+  c26.resize (numModelRegions);
+  c33.resize (numModelRegions);
+  c34.resize (numModelRegions);
+  c35.resize (numModelRegions);
+  c36.resize (numModelRegions);
+  c44.resize (numModelRegions);
+  c45.resize (numModelRegions);
+  c46.resize (numModelRegions);
+  c55.resize (numModelRegions);
+  c56.resize (numModelRegions);
+  c66.resize (numModelRegions);
+  rho.resize (numModelRegions);
+  
+  for (size_t r=0; r<numModelRegions; r++) {
+    
+    size_t numParams = x[r].size ();
+    
+    c11[r].resize (numParams);
+    c12[r].resize (numParams);
+    c13[r].resize (numParams);
+    c14[r].resize (numParams);
+    c15[r].resize (numParams);
+    c16[r].resize (numParams);
+    c22[r].resize (numParams);
+    c23[r].resize (numParams);
+    c24[r].resize (numParams);
+    c25[r].resize (numParams);
+    c26[r].resize (numParams);
+    c33[r].resize (numParams);
+    c34[r].resize (numParams);
+    c35[r].resize (numParams);
+    c36[r].resize (numParams);
+    c44[r].resize (numParams);
+    c45[r].resize (numParams);
+    c46[r].resize (numParams);
+    c55[r].resize (numParams);
+    c56[r].resize (numParams);
+    c66[r].resize (numParams);
+    rho[r].resize (numParams);  
+    
+  }
+    
 }
 
 void model::createKDtree () {
@@ -162,6 +221,12 @@ void model::rotate () {
 
 void model::findMinMaxRadius () {
   
+  double ZERO           = 0.0;
+  double NINETY         = 90.0;
+  double NEG_NINETY     = -90.0;
+  double ONE_EIGHTY     = 180.0;
+  double NEG_ONE_EIGHTY = -180.0;
+  
   rMin.resize (numModelRegions);
   rMax.resize (numModelRegions);
   
@@ -175,17 +240,36 @@ void model::findMinMaxRadius () {
     size_t numParams = x[r].size();
     for (size_t i=0; i<numParams; i++) {
       
-      double rad = getRadius (x[r][i], y[r][i], z[r][i]);
+      double colDum, lonDum, radDum;
+      xyz2ColLonRad (x[r][i], y[r][i], z[r][i], colDum, lonDum, radDum);
       
-      if (rad < rMin[r])
-        rMin[r] = rad;
+      if (radDum < rMin[r])
+        rMin[r] = radDum;
       
-      if (rad > rMax[r])
-        rMax[r] = rad;
+      if (radDum > rMax[r])
+        rMax[r] = radDum;
+      
+      if (colDum <= deg2Rad (NINETY))
+        colChunks.insert ("col000-090.");
+      
+      if (colDum >= deg2Rad (NINETY))
+        colChunks.insert ("col090-180.");
+    
+      if (lonDum >= deg2Rad (ZERO) && lonDum <= deg2Rad (NINETY))
+        lonChunks.insert ("lon000-090.");
+
+      if (lonDum >= deg2Rad (NINETY) && lonDum <= deg2Rad (ONE_EIGHTY))
+        lonChunks.insert ("lon090-180.");
+
+      if (lonDum <= deg2Rad (ZERO) && lonDum >= deg2Rad (NEG_NINETY))
+        lonChunks.insert ("lon090-180.");
+
+      if (lonDum <= deg2Rad (NEG_NINETY) && lonDum >= deg2Rad (NEG_ONE_EIGHTY))
+        lonChunks.insert ("lon090-180.");
       
     }
   }
-  
+    
 }
 
 void model::findMinMaxPhys () {

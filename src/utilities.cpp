@@ -29,11 +29,48 @@ void rotation_matrix::rotate (double &xOld, double &yOld, double &zOld,
 
 }
 
+std::vector<string> getRequiredChunks (model &mod) {
+  
+  std::set<std::string>::iterator colIter;
+  std::set<std::string>::iterator lonIter;
+  
+  std::vector<std::string> modelChunks;
+  
+  DIR *dp = opendir (mod.meshDirectory.c_str ());
+  struct dirent *dirp;
+  if (dp == NULL)
+    error ("Directory where you told me to find the exodus files doesn't exist.");
+    
+  while ((dirp = readdir (dp))) {
+        
+    std::string fileName = dirp->d_name;
+    if ( fileName.find_last_of ("ex2") != std::string::npos) {
+
+      for (colIter=mod.colChunks.begin (); colIter!=mod.colChunks.end (); ++colIter) {
+        for (lonIter=mod.lonChunks.begin (); lonIter!=mod.lonChunks.end (); ++lonIter) {
+
+          double radMin = stod (fileName.substr (25, 4));
+                        
+          if ((radMin >= *std::min_element (mod.rMin.begin (), mod.rMin.end ())) && 
+              (fileName.find (*colIter) != std::string::npos) &&
+              (fileName.find (*lonIter) != std::string::npos))                
+            modelChunks.push_back (mod.meshDirectory + "/" + fileName);
+                            
+        }
+      }
+    }                
+  }
+  
+  return modelChunks;
+  
+}
+
 bool testInsideTet (vector<double> &v0, 
                     vector<double> &v1, 
                     vector<double> &v2, 
                     vector<double> &v3,
-                    vector<double> &p0) {
+                    vector<double> &p0,
+                    double &l1, double &l2, double &l3, double &l4) {
                       
                       
   double x1 = v0[0]; double y1 = v0[1]; double z1 = v0[2];
@@ -69,12 +106,10 @@ bool testInsideTet (vector<double> &v0,
   double hi = det * (a * f - c * d) * (-1);
   double ii = det * (a * e - b * d);
   
-  double l1 = ai * vecX + di * vecY + gi * vecZ;
-  double l2 = bi * vecX + ei * vecY + hi * vecZ;
-  double l3 = ci * vecX + fi * vecY + ii * vecZ;
-  double l4 = 1 - l1 - l2 - l3;
-  
-  // cout << l1 << " " << l2 << " " << l3 << " " << l4 << endl;
+  l1 = ai * vecX + di * vecY + gi * vecZ;
+  l2 = bi * vecX + ei * vecY + hi * vecZ;
+  l3 = ci * vecX + fi * vecY + ii * vecZ;
+  l4 = 1 - l1 - l2 - l3;
   
   if (l1 >= 0 && l2 >= 0 && l3 >= 0 && l4 >= 0) {
     return true;
@@ -117,6 +152,13 @@ std::vector<double> getNormalVector (std::vector<double> &A,
   
   return n;
   
+}
+
+double interpolateTet (std::vector<double> &vec, size_t &n0,  size_t &n1, size_t &n2, size_t &n3,
+                       double &l0, double &l1, double &l2, double &l3) {
+                         
+  return l0 * vec[n0] + l1 * vec[n1] + l2 * vec[n2] + l3 * vec[n3];                         
+                         
 }
 
 void xyz2ColLonRad (double &x, double &y, double &z, double &col, double &lon, double &rad) {
@@ -239,6 +281,18 @@ void broadcast2DVector (vector<vector<double>> &bVector) {
       delete [] recvBuf;      
     }
   }  
+}
+
+std::vector<double> returnVector (double &x, double &y, double &z) {
+  
+  // Helper function to return an allocated vector to a point in 3d space.
+  std::vector<double> vec (3, 0);
+  vec[0] = x;
+  vec[1] = y;
+  vec[2] = z;
+  
+  return vec;    
+  
 }
 
 double getRadius (double &x, double &y, double &z) {

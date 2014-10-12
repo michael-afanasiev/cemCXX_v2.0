@@ -1,9 +1,9 @@
 CXX      = /opt/local/bin/mpic++
 CC       = /usr/local/bin/gcc-4.8
 
-CXXFLAGS = -g -std=c++11 -Wall -I/opt/local/include
+CXXFLAGS = -O3 -std=c++11 -Wall -I/opt/local/include -fopenmp
 CFLAGS   = -O3
-LDFLAGS  = -L/opt/local/lib -lexoIIv2c -lnetcdf -lhdf5_hl -lhdf5  -lz -lcurl
+LDFLAGS  = -L/opt/local/lib -lexoIIv2c -lnetcdf -lhdf5_hl -lhdf5  -lz -lcurl -fopenmp
 
 OBJECTS		= \
 	./obj/main.o \

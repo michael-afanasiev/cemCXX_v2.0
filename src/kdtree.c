@@ -261,6 +261,7 @@ static int find_nearest(struct kdnode *node, const double *pos, double range, st
 
 	if(!node) return 0;
 
+  // printf ("%f %f\n", range, node->pos[i]);
 	dist_sq = 0;
 	for(i=0; i<dim; i++) {
 		dist_sq += SQ(node->pos[i] - pos[i]);

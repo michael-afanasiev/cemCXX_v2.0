@@ -7,11 +7,22 @@ int main () {
   ses3d modType;
   model *mod =& modType;
   
-  exodus_file exo ("./ex2/col000-090.lon090-180.rad6361-6371.000.ex2");  
+  std::vector<std::string> fileNames;
+  std::vector<std::string>::iterator fileNameIter;
   
-  mesh msh (exo);
-  msh.interpolate (*mod);
-  msh.dump (exo);
+  fileNames = getRequiredChunks (*mod);
+    
+  for (fileNameIter=fileNames.begin (); fileNameIter!=fileNames.end(); ++fileNameIter) {
+    
+    cout << *fileNameIter << endl;
+    exodus_file exo (*fileNameIter);  
+  
+    mesh msh (exo);
+    // msh.interpolate (*mod);
+    msh.extract (*mod);
+    msh.dump (exo);
+    
+  }
   
   MPI::Finalize ();
     

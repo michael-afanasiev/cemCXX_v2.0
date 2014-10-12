@@ -1,12 +1,25 @@
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <fstream>
 #include <cmath>
+#include <set>
 
+#include <dirent.h>
 #include "kdtree.h"
 #include "mpi.h"
 
 using namespace std;
+
+// ###### classes ######
+class background_models;
+class rotation_matrix;
+class elasticTensor;
+class exodus_file;
+class model;
+class ses3d;
+class mesh;
+
 
 // ###### misc. utilities. ######
 
@@ -45,23 +58,20 @@ bool testInsideTet                  (vector<double> &v0,
                                      vector<double> &v1, 
                                      vector<double> &v2, 
                                      vector<double> &v3,
-                                     vector<double> &p0);
+                                     vector<double> &p0,
+                                     double &l1, double &l2, double &l3, double &l4);
                                     
 std::vector<double> getNormalVector (std::vector<double> &A, std::vector<double> &B, 
                                      std::vector<double> &C);
+                                     
+std::vector<double> returnVector (double &x, double &y, double &z);     
+double interpolateTet (std::vector<double> &vec, size_t &n0, size_t &n1, size_t &n2, size_t &n3,
+                       double &l0, double &l1, double &l2, double &l3); 
+                       
+                       std::vector<string> getRequiredChunks (model &mod);                             
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
-
-// ###### classes ######
-class background_models;
-class rotation_matrix;
-class elasticTensor;
-class exodus_file;
-class model;
-class ses3d;
-class mesh;
-
 
 class model {
   
@@ -121,7 +131,6 @@ protected:
   std::vector<double> xMax, yMax, zMax;
   std::vector<double> lonMin, lonMax;
   std::vector<double> colMin, colMax;
-  std::vector<double> rMax, rMin;  
 
   double xCtr, yCtr, zCtr;  
   
@@ -144,9 +153,18 @@ protected:
   void findBoundingBox   ();
   void findMinMaxRadius  ();  
   void readParameterFile ();
+  void allocateArrays    ();
   
   
   int testBoundingBox  (double x, double y, double z);
+  
+public:
+  
+  std::string meshDirectory;
+  std::set<std::string> colChunks;
+  std::set<std::string> lonChunks;
+  std::vector<double> rMax, rMin;  
+  
 
 };
 
@@ -195,12 +213,19 @@ public:
   
   void dump        (exodus_file &);
   void interpolate (model &);
+  void extract     (model &);
   
 
 protected:
   
   // co-ordinates.
   std::vector<double> x, y, z;  
+  
+  std::string eFileName;
+  
+  // extremes
+  double xMin, xMax, yMin, yMax, zMin, zMax;
+  double radMin, radMax;
   
   // Elastic moduli.
   std::vector<double> c11, c12, c13, c14, c15, c16;
@@ -219,10 +244,21 @@ protected:
   
   // bool array for region finding.
   std::vector<int> interpolatingSet;
+  
+  // vector for side sets.
+  std::vector<int> sideSetSide;
+  std::vector<int> sideSetElem;
+    
+  // kdtree.
+  kdtree *tree;
+  std::vector<int> datKD;
+    
+  std::vector<bool> onSideSet;
+  
     
   // misc. mesh details.
   const size_t numNodePerElem=4;
-  int numNodes;
+  size_t numNodes;
   
   elasticTensor breakdown     (model &mod, double &x, double &y, double &z, 
                                size_t &region, size_t &mshInd, int &point);                                
@@ -234,6 +270,12 @@ protected:
                                size_t &reg, int &pnt);
   double SBTRKTUpdate         (vector<vector<double>> &vec, double &valMsh, 
                                size_t &reg, int &pnt);
+  void createKDTree ();
+  void getMinMaxDimensions ();
+  bool checkBoundingBox (double &x, double &y, double &z);
+  
+  std::vector<double> checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
+                                       std::vector<double> &v2, std::vector<double> &p0) {}
   
 };
 
@@ -270,14 +312,19 @@ protected:
   size_t numSideSets;
   size_t numElemBlock;
   const size_t numNodePerElem=4;
+  const size_t numSidePerElem=3;
   
   // bookkeeping arrays.
   std::vector<int> nodeNumMap;
   int *elemNumMap;
   int *blockNumMap;
   int *nodeSetNumMap;
+  int *sideSetNumMap;
   std::vector<int>  connectivity;
   std::vector<int>  interpolatingSet;
+  std::vector<int>  sideSetSide;
+  std::vector<int>  sideSetElem;
+  std::vector<bool> onSideSet;
   
   // initialize with dummy filename for safety.
   std::string fileName;
@@ -293,6 +340,7 @@ protected:
   void closeFile        ();
   void getConnectivity  ();
   void getNodeSets      ();
+  void getSideSets      ();
       
   int getNumElemInBlock (int &elmBlockId);
   int getNumNodeInSet   (int &nodeSetId);
@@ -300,6 +348,10 @@ protected:
   std::vector<int> returnConnectivity ();
   std::vector<int> returnNodeNumMap   ();
   std::vector<int> returnInterpolatingSet ();
+  std::vector<int> returnSideSetSide ();
+  std::vector<int> returnSideSetElem ();
+  std::vector<bool> returnOnSideSet ();
+  std::string returnName ();
   
   void writeVariable (std::vector<double> &var, std::string varName);
 

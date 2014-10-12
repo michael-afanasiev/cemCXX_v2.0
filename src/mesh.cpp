@@ -4,6 +4,8 @@ using namespace std;
 
 mesh::mesh (exodus_file &eFile) {
   
+  eFileName = eFile.returnName ();
+  getMinMaxDimensions();
   eFile.getXYZ (x, y, z);
   
   c11              = eFile.getVariable ("c11");  
@@ -33,6 +35,9 @@ mesh::mesh (exodus_file &eFile) {
   nodeNumMap       = eFile.returnNodeNumMap   ();
   numNodes         = eFile.numNodes;
   interpolatingSet = eFile.returnInterpolatingSet ();
+  sideSetSide      = eFile.returnSideSetSide ();
+  sideSetElem      = eFile.returnSideSetElem ();
+  onSideSet        = eFile.returnOnSideSet   ();
   
 }
 
@@ -70,6 +75,169 @@ void mesh::interpolate (model &mod) {
          
   }
   
+}
+
+void mesh::createKDTree () {
+  
+  intensivePrint ("Creating KD-tree.");
+  datKD.resize (numNodes);
+  
+  tree = kd_create (3);
+  
+  for (size_t i=0; i<numNodes; i++) {
+    
+    datKD[i] = i;
+    kd_insert3 (tree, x[i], y[i], z[i], &datKD[i]);
+    
+  }  
+  
+}
+
+void mesh::extract (model &mod) {
+  
+  createKDTree ();
+  
+  intensivePrint ("Extracting.");
+  
+  double searchRadius = 1.;
+  const double ONE_PERCENT=0.01;
+  const double TEN_PERCENT=0.10;
+  size_t sizeConnect = connectivity.size ();
+  
+  for (size_t r=0; r<mod.numModelRegions; r++) {
+    
+    size_t numParams = mod.x[r].size ();
+    
+#pragma omp parallel for firstprivate (searchRadius)
+    for (size_t i=0; i<numParams; i++) {
+
+      double xTarget = mod.x[r][i];
+      double yTarget = mod.y[r][i];
+      double zTarget = mod.z[r][i];
+      
+      std::vector<double> p0 = returnVector (xTarget, yTarget, zTarget);
+      
+      if (checkBoundingBox (xTarget, yTarget, zTarget)) {
+        
+        bool found = false;
+        while (not found) {
+          
+          kdres *set = kd_nearest_range3 (tree, xTarget, yTarget, zTarget, searchRadius);
+
+          size_t n0=0, n1=0, n2=0, n3=0;
+          size_t i0=0, i1=0, i2=0, i3=0;
+          while (kd_res_end (set) == 0 && not found) {
+        
+            void *ind = kd_res_item_data (set);
+            int point = * (int *) ind;
+          
+            for (size_t e=0; e<sizeConnect; e++) {
+          
+              if ((connectivity[e] - 1) == point) {
+      
+                if        (e % numNodePerElem == 0) {
+                  i0 = e+0;
+                  i1 = e+1;
+                  i2 = e+2;
+                  i3 = e+3;
+                } else if (e % numNodePerElem == 1) {
+                  i0 = e-1;
+                  i1 = e+0;
+                  i2 = e+1;
+                  i3 = e+2;
+                } else if (e % numNodePerElem == 2) {
+                  i0 = e-2;
+                  i1 = e-1;
+                  i2 = e+0;
+                  i3 = e+1;
+                } else if (e % numNodePerElem == 3) {
+                  i0 = e-3;
+                  i1 = e-2;
+                  i2 = e-1;
+                  i3 = e+0;
+                }         
+                                   
+                n0 = connectivity[i0]-1;
+                n1 = connectivity[i1]-1;
+                n2 = connectivity[i2]-1;
+                n3 = connectivity[i3]-1;
+                                                
+                std::vector<double> v0 = returnVector (x[n0], y[n0], z[n0]);
+                std::vector<double> v1 = returnVector (x[n1], y[n1], z[n1]);
+                std::vector<double> v2 = returnVector (x[n2], y[n2], z[n2]);
+                std::vector<double> v3 = returnVector (x[n3], y[n3], z[n3]);
+                              
+                if (onSideSet[i0] || onSideSet[i1] || onSideSet[i2] || onSideSet[i3]) {
+                  cout << onSideSet[i0] << ' ' << onSideSet[i1] << ' ' << onSideSet[i2] << ' ' << onSideSet[i3] << endl;
+                  cin.get();
+                }
+                  
+                  
+                double l0, l1, l2, l3;
+                found = testInsideTet (v0, v1, v2, v3, p0, l0, l1, l2, l3);
+                if (found == true) {
+                
+                  mod.c11[r][i] = interpolateTet (c11, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c12[r][i] = interpolateTet (c12, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c13[r][i] = interpolateTet (c13, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c14[r][i] = interpolateTet (c14, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c15[r][i] = interpolateTet (c15, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c16[r][i] = interpolateTet (c16, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c22[r][i] = interpolateTet (c22, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c23[r][i] = interpolateTet (c23, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c24[r][i] = interpolateTet (c24, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c25[r][i] = interpolateTet (c25, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c26[r][i] = interpolateTet (c26, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c33[r][i] = interpolateTet (c33, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c34[r][i] = interpolateTet (c34, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c35[r][i] = interpolateTet (c35, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c36[r][i] = interpolateTet (c36, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c44[r][i] = interpolateTet (c44, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c45[r][i] = interpolateTet (c45, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c46[r][i] = interpolateTet (c46, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c55[r][i] = interpolateTet (c55, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  
+                  searchRadius = searchRadius - searchRadius * ONE_PERCENT;
+                  break;               
+                
+                }            
+              }          
+            }        
+      
+            kd_res_next (set);
+        
+          }
+        
+          if (not found)
+            searchRadius = searchRadius + searchRadius * TEN_PERCENT;              
+           
+          if (kd_res_size (set) != 0)
+            kd_res_free (set);
+          
+          cout << searchRadius << endl;
+          cout << getRadius (xTarget, yTarget, zTarget) << endl;
+          
+        }                        
+      }
+  
+      cout << numParams - i << endl;   
+      
+    }
+        
+  }
+    
+}
+
+std::vector<double> checkAndProject (std::vector<double> &v0, std::vector<double> &v1, 
+                                     std::vector<double> &v2, std::vector<double> &p0) {
+                                       
+  std::vector<double> n0 = getNormalVector (v0, v1, v2);
+  cout << n0[0] << endl;
+  cin.get();
+                                       
 }
 
 double mesh::returnUpdate (vector<vector<double>> &vec, double &valMsh, 
@@ -143,7 +311,6 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
   elasticTensor moduli;
   if (mod.symSys.compare (0, 3, "tti") == 0) {
     
-    double rhoNew, vsvNew, vshNew, vpvNew, vphNew;
     
     // Initialize values to mesh values.
     double vshMsh = sqrt (c44[mshInd] / rho[mshInd]);
@@ -151,6 +318,13 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
     double vpvMsh = sqrt (c22[mshInd] / rho[mshInd]);
     double vphMsh = sqrt (c22[mshInd] / rho[mshInd]);
     double rhoMsh = rho[mshInd];  
+
+    double rhoNew = rhoMsh; 
+    double vsvNew = vsvMsh;
+    double vshNew = vshMsh;
+    double vpvNew = vpvMsh;
+    double vphNew = vphMsh;
+
   
     if (mod.interpolationType == "add_to_1d_background") {
     
@@ -254,4 +428,72 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
   
   return moduli;
                        
-}    
+}   
+
+void mesh::getMinMaxDimensions () {
+  
+  size_t found;
+  found = eFileName.find ("col000-090");
+  if (found != string::npos) {
+    zMin = 0;
+    zMax = R_EARTH;
+  }
+      
+  found = eFileName.find ("col090-180");
+  if (found != string::npos) {
+    zMin = (-1) * R_EARTH;
+    zMax = 0;    
+  }
+  
+  found = eFileName.find ("lon000-090");
+  if (found != string::npos) {
+    xMin = 0;
+    xMax = R_EARTH;
+    yMin = 0;
+    yMax = R_EARTH;
+  }
+
+  found = eFileName.find ("lon090-180");
+  if (found != string::npos) {
+    xMin = (-1) * R_EARTH;
+    xMax = 0;
+    yMin = 0;
+    yMax = R_EARTH;
+  }
+
+  found = eFileName.find ("lon180-270");
+  if (found != string::npos) {
+    xMin = (-1) * R_EARTH;
+    xMax = 0;
+    yMin = (-1) * R_EARTH;
+    yMax = 0;
+  }
+
+  found = eFileName.find ("lon270-360");
+  if (found != string::npos) {
+    xMin = 0;
+    xMax = R_EARTH;
+    yMin = (-1) * R_EARTH;
+    yMax = 0;
+  }
+
+  size_t radLoc = eFileName.find_last_of ("rad");
+  radMin = atof (eFileName.substr (radLoc+1, 4).c_str ());
+  radMax = atof (eFileName.substr (radLoc+6, 4).c_str ());  
+  
+}
+
+bool mesh::checkBoundingBox (double &x, double &y, double &z) {
+  
+  double rad = getRadius (x, y, z);
+  
+  if (x   <= xMax   && x   >= xMin &&
+      y   <= yMax   && y   >= yMin &&
+      z   <= zMax   && z   >= zMin &&
+      rad <= radMax && rad >= radMin) {      
+    return true;
+  } else {
+    return false;
+  }
+      
+}
