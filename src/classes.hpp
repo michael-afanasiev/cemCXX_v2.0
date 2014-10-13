@@ -46,7 +46,7 @@ int  getRank           ();
 double deg2Rad                      (double &deg);
 double rad2Deg                      (double &rad);
 double getRadius                    (double &x, double &y, double &z);
-double projWonV_Dist                (double &x, double &y, double &z, std::vector<double> &v, 
+double projWonV_Dist                (std::vector<double> &x, std::vector<double> &v, 
                                      std::vector<double> &x0);
                                     
 void xyz2ColLonRad                  (double &x, double &y, double &z, double &col, double &lon, 
@@ -274,8 +274,8 @@ protected:
   void getMinMaxDimensions ();
   bool checkBoundingBox (double &x, double &y, double &z);
   
-  std::vector<double> checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
-                                       std::vector<double> &v2, std::vector<double> &p0) {}
+  void checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
+                        std::vector<double> &v2, std::vector<double> &p0);
   
 };
 

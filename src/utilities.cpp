@@ -177,12 +177,12 @@ void colLonRad2xyz (double &x, double &y, double &z, double &col, double &lon, d
   
 }
 
-double projWonV_Dist (double &x, double &y, double&z, std::vector<double> &v, std::vector<double> &x0) {
+double projWonV_Dist (std::vector<double> &x, std::vector<double> &v, std::vector<double> &x0) {
   
   // Projects a vector x - x0 onto the plane v.
   
-  double dotVW = v[0] * (x-x0[0]) + v[1] * (y-x0[1]) + v[2] * (z - x0[2]);
-  double magV  = sqrt (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+  float dotVW = v[0] * (x[0]-x0[0]) + v[1] * (x[1]-x0[1]) + v[2] * (x[2] - x0[2]);
+  float magV  = sqrt (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
   
   return dotVW / magV;
   

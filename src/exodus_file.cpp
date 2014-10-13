@@ -54,6 +54,14 @@ void exodus_file::getSideSets () {
   sideSetNumMap = new int [numSideSets];
   exodusCheck (ex_get_side_set_ids (idexo, sideSetNumMap), "ex_get_side_set_ids");
   
+  for (int i=0; i<numElem; i++) {
+  // cout << elemNumMap[i] << endl;
+  if (elemNumMap[i+1] != elemNumMap[i] + 1) {
+    cout << "BAD" << endl;
+    cout << elemNumMap[i+1] << ' ' << elemNumMap[i] << endl;
+    cin.get ();
+  }
+}
   // Determine which node set to get based on region name, and only read that nodeset in.    
   
   for (size_t i=0; i<numSideSets; i++) {

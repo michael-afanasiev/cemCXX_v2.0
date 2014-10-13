@@ -166,12 +166,19 @@ void mesh::extract (model &mod) {
                 std::vector<double> v1 = returnVector (x[n1], y[n1], z[n1]);
                 std::vector<double> v2 = returnVector (x[n2], y[n2], z[n2]);
                 std::vector<double> v3 = returnVector (x[n3], y[n3], z[n3]);
-                              
-                if (onSideSet[i0] || onSideSet[i1] || onSideSet[i2] || onSideSet[i3]) {
-                  cout << onSideSet[i0] << ' ' << onSideSet[i1] << ' ' << onSideSet[i2] << ' ' << onSideSet[i3] << endl;
-                  cin.get();
-                }
                   
+                // if (onSideSet[i0] || onSideSet[i1] || onSideSet[i2] || onSideSet[i3])
+                // cout << onSideSet[i0] << ' ' << onSideSet[i1] << ' ' << onSideSet[i2] << ' ' << onSideSet[i3] << endl;
+                if (onSideSet[i0] && onSideSet[i1] && onSideSet[i3]) {
+                  checkAndProject (v0, v1, v3, p0);
+                } else if (onSideSet[i1] && onSideSet[i2] && onSideSet[i3]) {
+                  checkAndProject (v1, v2, v3, p0);
+                } else if (onSideSet[i0] && onSideSet[i2] && onSideSet[i3]) {
+                  cout << "THIS" << endl;
+                  checkAndProject (v0, v2, v3, p0);
+                } else if (onSideSet[i0] && onSideSet[i1] && onSideSet[i2]) {
+                  checkAndProject (v0, v1, v2, p0);
+                }
                   
                 double l0, l1, l2, l3;
                 found = testInsideTet (v0, v1, v2, v3, p0, l0, l1, l2, l3);
@@ -217,13 +224,13 @@ void mesh::extract (model &mod) {
           if (kd_res_size (set) != 0)
             kd_res_free (set);
           
-          cout << searchRadius << endl;
-          cout << getRadius (xTarget, yTarget, zTarget) << endl;
+          // cout << searchRadius << endl;
+          // cout << getRadius (xTarget, yTarget, zTarget) << endl;
           
         }                        
       }
   
-      cout << numParams - i << endl;   
+      // cout << numParams - i << endl;   m
       
     }
         
@@ -231,11 +238,29 @@ void mesh::extract (model &mod) {
     
 }
 
-std::vector<double> checkAndProject (std::vector<double> &v0, std::vector<double> &v1, 
-                                     std::vector<double> &v2, std::vector<double> &p0) {
-                                       
+void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1, 
+                      std::vector<double> &v2, std::vector<double> &p0) {
+
+  double xOrig = 0; double yOrig = 0; double zOrig = 0;
+  std::vector<double> orig = returnVector (xOrig, yOrig, zOrig);
   std::vector<double> n0 = getNormalVector (v0, v1, v2);
-  cout << n0[0] << endl;
+  
+  double col, lon, rad;
+  xyz2ColLonRad (v0[0], v0[1], v0[2], col, lon, rad);
+  cout << radMin << ' ' << radMax << endl;
+  cout << "SPHERE: " << rad2Deg (col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
+  xyz2ColLonRad (v1[0], v1[1], v1[2], col, lon, rad);
+  cout << "SPHERE: " << rad2Deg (col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
+  xyz2ColLonRad (v2[0], v2[1], v2[2], col, lon, rad);
+  cout << "SPHERE: " << rad2Deg (col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
+  cout << "VECTOR: " << v0[0] << ' ' << v0[1] << ' ' << v0[2] << endl;
+  cout << "VECTOR: " << v1[0] << ' ' << v1[1] << ' ' << v1[2] << endl;
+  cout << "VECTOR: " << v2[0] << ' ' << v2[1] << ' ' << v2[2] << endl;
+  cout << "POINT: " << p0[0] << ' ' << p0[1] << ' ' << p0[2] << endl;
+  cout << "NORMAL: " << n0[0] << ' ' << n0[1] << ' ' << n0[2] << endl;
+  cout << "DIST: " << projWonV_Dist (v2, n0, p0) << endl;
+  cout << "POINT: " << getRadius (p0[0], p0[1], p0[2]) << endl;
+  
   cin.get();
                                        
 }
