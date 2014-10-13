@@ -141,9 +141,6 @@ protected:
   std::vector<double> colMinSearch, colMaxSearch, radMinSearch;
 
   double xCtrSearch, yCtrSearch, zCtrSearch;    
-
-  virtual void read  (void) =0;
-  virtual void write (void) =0;
   
   void rotate            ();
   void findMinMax        ();
@@ -159,6 +156,10 @@ protected:
   int testBoundingBox  (double x, double y, double z);
   
 public:
+  
+
+  virtual void read  (void) =0;
+  virtual void write (void) =0;
   
   std::string meshDirectory;
   std::set<std::string> colChunks;
@@ -188,11 +189,11 @@ class ses3d: public model {
 public:
   
   ses3d ();
-  
-protected:
     
   void read  (void);
-  void write (void) {};
+  void write (void);
+  
+protected:
   
   void readFile          (std::vector<std::vector<double>> &vec, std::string type);
   void broadcast         ();
@@ -273,6 +274,7 @@ protected:
   void createKDTree ();
   void getMinMaxDimensions ();
   bool checkBoundingBox (double &x, double &y, double &z);
+  void getSideSets ();
   
   void checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
                         std::vector<double> &v2, std::vector<double> &p0);

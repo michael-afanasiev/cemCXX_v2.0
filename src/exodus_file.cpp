@@ -18,7 +18,7 @@ exodus_file::exodus_file (std::string fname) {
   getElemNumMap   (); 
   getConnectivity ();
   getNodeSets     ();
-  getSideSets     ();
+  // getSideSets     ();
   
   printMeshInfo ();
   
@@ -48,91 +48,29 @@ void exodus_file::openFile () {
     
 }
 
-void exodus_file::getSideSets () {
-  
-  // Get side set ids.
-  sideSetNumMap = new int [numSideSets];
-  exodusCheck (ex_get_side_set_ids (idexo, sideSetNumMap), "ex_get_side_set_ids");
-  
-  for (int i=0; i<numElem; i++) {
-  // cout << elemNumMap[i] << endl;
-  if (elemNumMap[i+1] != elemNumMap[i] + 1) {
-    cout << "BAD" << endl;
-    cout << elemNumMap[i+1] << ' ' << elemNumMap[i] << endl;
-    cin.get ();
-  }
-}
-  // Determine which node set to get based on region name, and only read that nodeset in.    
-  
-  for (size_t i=0; i<numSideSets; i++) {
-      
-    int numSideThisSet, numDfThisSet;
-    
-    exodusCheck (ex_get_side_set_param (idexo, sideSetNumMap[i], &numSideThisSet, &numDfThisSet), 
-      "ex_get_side_set_param");
-
-    sideSetElem.resize (numSideThisSet);
-    sideSetSide.resize (numSideThisSet);
-    int *scratchSideElem = new int [numSideThisSet];      
-    int *scratchSideSide = new int [numSideThisSet];
-    
-    exodusCheck (ex_get_side_set (idexo, sideSetNumMap[i], scratchSideElem, scratchSideSide), 
-      "ex_get_side_set_node_list");
-    
-    std::copy (scratchSideElem, scratchSideElem+numSideThisSet, sideSetElem.begin ());
-    std::copy (scratchSideSide, scratchSideSide+numSideThisSet, sideSetSide.begin ());  
-        
-    delete [] scratchSideElem;
-    delete [] scratchSideSide;              
-  
-    // Generate scratch array for side set identification.
-    std::vector<int> faces (numSideThisSet*numSidePerElem);
-    size_t k=0; size_t numSideThisSetIter = numSideThisSet;
-    for (size_t i=0; i<numSideThisSetIter; i++) {
-    
-      int elemNo = sideSetElem[i];
-      int faceNo = sideSetSide[i];
-    
-      int n1=0, n2=0, n3=0;
-      if        (faceNo == 1) {
-        n1 = elemNo*numNodePerElem+0;
-        n2 = elemNo*numNodePerElem+1;
-        n3 = elemNo*numNodePerElem+3;
-      } else if (faceNo == 2) {
-        n1 = elemNo*numNodePerElem+1;
-        n2 = elemNo*numNodePerElem+2;
-        n3 = elemNo*numNodePerElem+3;      
-      } else if (faceNo == 3) {
-        n1 = elemNo*numNodePerElem+0;
-        n2 = elemNo*numNodePerElem+2;
-        n3 = elemNo*numNodePerElem+3;      
-      } else if (faceNo == 4) {
-        n1 = elemNo*numNodePerElem+0;
-        n2 = elemNo*numNodePerElem+1;
-        n3 = elemNo*numNodePerElem+2;   
-      }
-      
-      faces[k]   = n1;
-      faces[k+1] = n2;
-      faces[k+2] = n3;
-    
-      k += 3;
-    
-    }
-    
-    // Populate boolean array with 'onSideSet' truth values.
-    size_t connectivitySize = connectivity.size ();
-    size_t faceArraySize    = faces.size ();
-    onSideSet.resize (connectivitySize);
-    std::fill (onSideSet.begin (), onSideSet.end (), false);
-    for (size_t i=0; i<faceArraySize; i++) {
-    
-      onSideSet[faces[i]] = true;      
-    
-    }  
-  }
-    
-}
+// void exodus_file::getSideSets () {
+//
+//   connectivitySize = connectivity.size ();
+//   for (size_t i=0; i<connectivitySize; i++) {
+//
+//     size_t posIter = connectivity[i] - 1;
+//
+//     double radius = getRadius (x[posIter], y[posIter], z[posIter])
+//
+//
+//     // Populate boolean array with 'onSideSet' truth values.
+//     size_t connectivitySize = connectivity.size ();
+//     size_t faceArraySize    = faces.size ();
+//     onSideSet.resize (connectivitySize);
+//     std::fill (onSideSet.begin (), onSideSet.end (), false);
+//     for (size_t i=0; i<faceArraySize; i++) {
+//
+//       onSideSet[faces[i]] = true;
+//
+//     }
+//   }
+//
+// }
 
 std::vector<bool> exodus_file::returnOnSideSet () {
   

@@ -22,6 +22,9 @@ int main () {
     msh.extract (*mod);
     msh.dump (exo);
     
+    mod->write ();
+    
+    exit (EXIT_FAILURE);
   }
   
   MPI::Finalize ();

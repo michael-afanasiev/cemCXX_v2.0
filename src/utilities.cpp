@@ -49,9 +49,9 @@ std::vector<string> getRequiredChunks (model &mod) {
       for (colIter=mod.colChunks.begin (); colIter!=mod.colChunks.end (); ++colIter) {
         for (lonIter=mod.lonChunks.begin (); lonIter!=mod.lonChunks.end (); ++lonIter) {
 
-          double radMin = stod (fileName.substr (25, 4));
+          double radMax = stod (fileName.substr (30, 4));
                         
-          if ((radMin >= *std::min_element (mod.rMin.begin (), mod.rMin.end ())) && 
+          if ((radMax >= *std::min_element (mod.rMin.begin (), mod.rMin.end ())) && 
               (fileName.find (*colIter) != std::string::npos) &&
               (fileName.find (*lonIter) != std::string::npos))                
             modelChunks.push_back (mod.meshDirectory + "/" + fileName);
@@ -142,7 +142,7 @@ std::vector<double> getNormalVector (std::vector<double> &A,
   AC[2] = C[2] - A[2];
   
   n[0] = AB[1] * AC[2] - AB[2] * AC[1];
-  n[1] = AB[0] * AC[2] - AB[2] * AC[0] * (-1);
+  n[1] = (AB[0] * AC[2] - AB[2] * AC[0]) * (-1);
   n[2] = AB[0] * AC[1] - AB[1] * AC[0];
   
   double magnitude = sqrt (n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
@@ -181,10 +181,9 @@ double projWonV_Dist (std::vector<double> &x, std::vector<double> &v, std::vecto
   
   // Projects a vector x - x0 onto the plane v.
   
-  float dotVW = v[0] * (x[0]-x0[0]) + v[1] * (x[1]-x0[1]) + v[2] * (x[2] - x0[2]);
-  float magV  = sqrt (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+  double dotVW = v[0] * (x0[0]-x[0]) + v[1] * (x0[1]-x[1]) + v[2] * (x0[2] - x[2]);
   
-  return dotVW / magV;
+  return dotVW;
   
 }
 

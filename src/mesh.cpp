@@ -37,7 +37,8 @@ mesh::mesh (exodus_file &eFile) {
   interpolatingSet = eFile.returnInterpolatingSet ();
   sideSetSide      = eFile.returnSideSetSide ();
   sideSetElem      = eFile.returnSideSetElem ();
-  onSideSet        = eFile.returnOnSideSet   ();
+  
+  getSideSets ();
   
 }
 
@@ -104,25 +105,30 @@ void mesh::extract (model &mod) {
   const double TEN_PERCENT=0.10;
   size_t sizeConnect = connectivity.size ();
   
+  
   for (size_t r=0; r<mod.numModelRegions; r++) {
     
     size_t numParams = mod.x[r].size ();
-    
-#pragma omp parallel for firstprivate (searchRadius)
+    int percent = (numParams) / 100.;
+    int pCount = 0;
+    int pIter  = 0;    
+        
+#pragma omp parallel for firstprivate (searchRadius, pCount, pIter)
     for (size_t i=0; i<numParams; i++) {
 
       double xTarget = mod.x[r][i];
       double yTarget = mod.y[r][i];
       double zTarget = mod.z[r][i];
       
-      std::vector<double> p0 = returnVector (xTarget, yTarget, zTarget);
-      
       if (checkBoundingBox (xTarget, yTarget, zTarget)) {
         
         bool found = false;
         while (not found) {
           
-          kdres *set = kd_nearest_range3 (tree, xTarget, yTarget, zTarget, searchRadius);
+          kdres *set;             
+          std::vector<double> p0 = returnVector (xTarget, yTarget, zTarget);
+          
+          set = kd_nearest_range3 (tree, xTarget, yTarget, zTarget, searchRadius);
 
           size_t n0=0, n1=0, n2=0, n3=0;
           size_t i0=0, i1=0, i2=0, i3=0;
@@ -167,14 +173,11 @@ void mesh::extract (model &mod) {
                 std::vector<double> v2 = returnVector (x[n2], y[n2], z[n2]);
                 std::vector<double> v3 = returnVector (x[n3], y[n3], z[n3]);
                   
-                // if (onSideSet[i0] || onSideSet[i1] || onSideSet[i2] || onSideSet[i3])
-                // cout << onSideSet[i0] << ' ' << onSideSet[i1] << ' ' << onSideSet[i2] << ' ' << onSideSet[i3] << endl;
                 if (onSideSet[i0] && onSideSet[i1] && onSideSet[i3]) {
                   checkAndProject (v0, v1, v3, p0);
                 } else if (onSideSet[i1] && onSideSet[i2] && onSideSet[i3]) {
                   checkAndProject (v1, v2, v3, p0);
                 } else if (onSideSet[i0] && onSideSet[i2] && onSideSet[i3]) {
-                  cout << "THIS" << endl;
                   checkAndProject (v0, v2, v3, p0);
                 } else if (onSideSet[i0] && onSideSet[i1] && onSideSet[i2]) {
                   checkAndProject (v0, v1, v2, p0);
@@ -182,6 +185,7 @@ void mesh::extract (model &mod) {
                   
                 double l0, l1, l2, l3;
                 found = testInsideTet (v0, v1, v2, v3, p0, l0, l1, l2, l3);
+                // cout << l0 << ' ' << l1 << ' ' << l2 << ' ' << l3 << endl;
                 if (found == true) {
                 
                   mod.c11[r][i] = interpolateTet (c11, n0, n1, n2, n3, l0, l1, l2, l3); 
@@ -205,7 +209,7 @@ void mesh::extract (model &mod) {
                   mod.c55[r][i] = interpolateTet (c55, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.rho[r][i] = getRadius (p0[0], p0[1], p0[2]);//interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
                   
                   searchRadius = searchRadius - searchRadius * ONE_PERCENT;
                   break;               
@@ -220,17 +224,22 @@ void mesh::extract (model &mod) {
         
           if (not found)
             searchRadius = searchRadius + searchRadius * TEN_PERCENT;              
-           
+
           if (kd_res_size (set) != 0)
             kd_res_free (set);
           
-          // cout << searchRadius << endl;
+          // cout << searchRadius << ' ' << kd_res_size(set) << endl;
           // cout << getRadius (xTarget, yTarget, zTarget) << endl;
           
         }                        
       }
   
-      // cout << numParams - i << endl;   m
+      pCount++;
+      if (pCount % percent == 0) {
+        cout << pIter << " %\r" << flush;
+        pIter++;
+      }
+      // cout << numParams - i << endl;
       
     }
         
@@ -238,30 +247,73 @@ void mesh::extract (model &mod) {
     
 }
 
-void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1, 
-                      std::vector<double> &v2, std::vector<double> &p0) {
+void mesh::getSideSets () {
+  
+  size_t connectivitySize = connectivity.size ();
+  
+  onSideSet.resize (connectivitySize);
+  std::fill (onSideSet.begin (), onSideSet.end (), false);
+  for (size_t i=0; i<connectivitySize; i++) {
+    
+    size_t posIter = connectivity[i] - 1;
+    
+    double radius = getRadius (x[posIter], y[posIter], z[posIter]);
+    if ((abs (radius-radMax) < 0.5) || (abs (radius-radMin) < 0.5))
+      onSideSet[i] = true;
+    
+  }
+  
+  intensivePrint ("DONE GETTING SIDES");
+  
+}
 
-  double xOrig = 0; double yOrig = 0; double zOrig = 0;
-  std::vector<double> orig = returnVector (xOrig, yOrig, zOrig);
+void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1, 
+                            std::vector<double> &v2, std::vector<double> &p0) {
+
+  std::vector<double> orig (3, 0);
   std::vector<double> n0 = getNormalVector (v0, v1, v2);
+  double dist            = projWonV_Dist (v0, n0, orig);
+  double pRadius         = getRadius (p0[0], p0[1], p0[2]);  
   
-  double col, lon, rad;
-  xyz2ColLonRad (v0[0], v0[1], v0[2], col, lon, rad);
-  cout << radMin << ' ' << radMax << endl;
-  cout << "SPHERE: " << rad2Deg (col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
-  xyz2ColLonRad (v1[0], v1[1], v1[2], col, lon, rad);
-  cout << "SPHERE: " << rad2Deg (col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
-  xyz2ColLonRad (v2[0], v2[1], v2[2], col, lon, rad);
-  cout << "SPHERE: " << rad2Deg (col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
-  cout << "VECTOR: " << v0[0] << ' ' << v0[1] << ' ' << v0[2] << endl;
-  cout << "VECTOR: " << v1[0] << ' ' << v1[1] << ' ' << v1[2] << endl;
-  cout << "VECTOR: " << v2[0] << ' ' << v2[1] << ' ' << v2[2] << endl;
-  cout << "POINT: " << p0[0] << ' ' << p0[1] << ' ' << p0[2] << endl;
-  cout << "NORMAL: " << n0[0] << ' ' << n0[1] << ' ' << n0[2] << endl;
-  cout << "DIST: " << projWonV_Dist (v2, n0, p0) << endl;
-  cout << "POINT: " << getRadius (p0[0], p0[1], p0[2]) << endl;
+  if (dist < 0) {
+    n0[0] = n0[0] * (-1);
+    n0[1] = n0[1] * (-1);
+    n0[2] = n0[2] * (-1);
+  }
   
-  cin.get();
+  double tiny = 0.01;
+  dist = projWonV_Dist (v0, n0, orig);
+  // cout << "PROJ: "   << dist << endl;
+  // cout << "BEFORE: " << getRadius (p0[0], p0[1], p0[2]) << endl;
+  dist = projWonV_Dist (v0, n0, orig);
+  if        (pRadius > dist && (abs (pRadius-radMax) < 1)) {
+    double dif = abs (radMax - dist);
+    if (abs(dif) > 1){
+    cout << dist << " ABOVE " << pRadius << endl;
+    cout << dif << " ABOVE" << endl;}
+    p0[0] = p0[0] + (n0[0]) * (dif + tiny);
+    p0[1] = p0[1] + (n0[1]) * (dif + tiny);
+    p0[2] = p0[2] + (n0[2]) * (dif + tiny);    
+  } else if (pRadius < dist && (abs (pRadius-radMin) < 1)) {
+    double dif = abs (radMin - dist);
+    cout << dist << " " << pRadius << endl;
+    cout << dif << " BELOW" << endl;
+    p0[0] = p0[0] + n0[0] * (dif+tiny) * (-1);
+    p0[1] = p0[1] + n0[1] * (dif+tiny) * (-1);
+    p0[2] = p0[2] + n0[2] * (dif+tiny) * (-1);        
+  }
+  // cout << "AFTER: " << getRadius (p0[0], p0[1], p0[2]) << endl;
+  // cin.get();
+
+  // ofstream myfile1 ("points.txt", ios::out);
+  // myfile1 << p0[0] << ' ' << p0[1] << ' ' << p0[2] << endl;
+  // myfile1.close ();
+  //
+  //
+  // ofstream myfile2 ("facets.txt", ios_base::app);
+  // myfile2 << v0[0] << ' ' << v0[1] << ' ' << v0[2] << endl;
+  // myfile2 << v1[0] << ' ' << v1[1] << ' ' << v1[2] << endl;
+  // myfile2 << v2[0] << ' ' << v2[1] << ' ' << v2[2] << endl;
                                        
 }
 

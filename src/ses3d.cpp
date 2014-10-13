@@ -207,6 +207,24 @@ void ses3d::readFile (vector<vector<double>> &vec, string type) {
   
 }
 
+void ses3d::write () {
+  
+  string fName = "rho";
+  std::cout << "Writing: " << fName << std::endl;
+  ofstream myfile (fName, ios::out);
+  
+  myfile << rho.size () << "\n";
+  for (size_t r=0; r<rho.size (); r++) {
+    myfile << rho[r].size () << "\n";
+    for (size_t i=0; i<rho[r].size (); i++) {
+      myfile << rho[r][i] << "\n";
+    }
+  }
+  
+  myfile.close ();
+  
+}
+
 void ses3d::convert2Cartesian () {
   
   // This function converts the spherical co-ordinates of the model array into xyz coordinates, 
