@@ -6,6 +6,8 @@
 #include <set>
 
 #include <dirent.h>
+#include <omp.h>
+
 #include "kdtree.h"
 #include "mpi.h"
 
@@ -72,6 +74,8 @@ double interpolateTet (std::vector<double> &vec, size_t &n0, size_t &n1, size_t 
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
+const double CLOSE   = 1;
+const double TINY    = 0.01;
 
 class model {
   
