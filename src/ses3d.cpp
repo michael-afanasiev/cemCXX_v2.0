@@ -7,7 +7,7 @@ ses3d::ses3d () {
   myRank    = MPI::COMM_WORLD.Get_rank ();
   worldSize = MPI::COMM_WORLD.Get_size ();
   
-  double deg = 57.5;
+  double deg = 0;
   angle = deg2Rad (deg);
   xRot = 0.;
   yRot = 1.;

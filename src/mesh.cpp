@@ -193,7 +193,8 @@ void mesh::extract (model &mod) {
       double xTarget = mod.x[r][i];
       double yTarget = mod.y[r][i];
       double zTarget = mod.z[r][i];
-            
+
+        
       // Check if we're within the (coarse) mesh bounds.
       if (checkBoundingBox (xTarget, yTarget, zTarget)) {
         
@@ -311,8 +312,12 @@ void mesh::extract (model &mod) {
           if (not found)
             searchRadius = searchRadius + searchRadius * TEN_PERCENT;     
 
-          if (searchRadius > 100)
+          if (searchRadius > 100) {
             cout << searchRadius << endl;
+            double col, lon, rad;
+            xyz2ColLonRad (xTarget, yTarget, zTarget, col, lon, rad);
+            cout << rad2Deg(col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
+          }
 
           // If we actually have a results set, let's free the memory needed for the next pass.
           if (kd_res_size (set) != 0)
