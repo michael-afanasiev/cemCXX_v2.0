@@ -35,6 +35,12 @@ void model::readParameterFile () {
     if (paramName[i] == "mesh_directory")
       meshDirectory = paramValue[i];
     
+    if (paramName[i] == "direction")
+      direction = paramValue[i];
+    
+    if (paramName[i] == "interpolating_region")
+      regionNames.push_back (paramValue[i]);
+    
   }  
   
 }
@@ -262,10 +268,10 @@ void model::findMinMaxRadius () {
         lonChunks.insert ("lon090-180.");
 
       if (lonDum <= deg2Rad (ZERO) && lonDum >= deg2Rad (NEG_NINETY))
-        lonChunks.insert ("lon090-180.");
+        lonChunks.insert ("lon270-360.");
 
       if (lonDum <= deg2Rad (NEG_NINETY) && lonDum >= deg2Rad (NEG_ONE_EIGHTY))
-        lonChunks.insert ("lon090-180.");
+        lonChunks.insert ("lon180-270.");
       
     }
   }
@@ -425,4 +431,42 @@ void model::findMinMaxRot () {
             
   }
   
+}
+
+void model::construct () {
+    
+  if (symSys.compare (0, 3, "tti") == 0) {
+    
+    vsh.resize (numModelRegions);
+    vsv.resize (numModelRegions);
+    vph.resize (numModelRegions);
+    vpv.resize (numModelRegions);
+    
+    for (size_t r=0; r<numModelRegions; r++) {
+      
+      size_t numParams = x[r].size ();
+      vsh[r].resize (numParams);
+      vsv[r].resize (numParams);
+      vph[r].resize (numParams);
+      vpv[r].resize (numParams);
+      
+    }    
+  }
+    
+  for (size_t r=0; r<numModelRegions; r++) {
+    
+    size_t numParams = x[r].size ();
+    for (size_t i=0; i<numParams; i++) {
+      
+      if (symSys.compare (0, 3, "tti") == 0) {                
+        
+        vsh[r][i] = sqrt (c44[r][i] / rho[r][i]);
+        vsv[r][i] = sqrt (c55[r][i] / rho[r][i]);
+        vpv[r][i] = sqrt (c22[r][i] / rho[r][i]);
+        vph[r][i] = sqrt (c22[r][i] / rho[r][i]);
+        
+      }                  
+    }
+  }
+        
 }

@@ -7,10 +7,10 @@ ses3d::ses3d () {
   myRank    = MPI::COMM_WORLD.Get_rank ();
   worldSize = MPI::COMM_WORLD.Get_size ();
   
-  double deg = 0.;
+  double deg = 57.5;
   angle = deg2Rad (deg);
   xRot = 0.;
-  yRot = 0.;
+  yRot = 1.;
   zRot = 0.;
   
   readParameterFile   ();
@@ -19,11 +19,11 @@ ses3d::ses3d () {
   convert2Radians     ();
   convert2Cartesian   ();
   rotate              ();
-  findMinMaxPhys      ();
+  // findMinMaxPhys      ();
   findMinMaxRadius    ();
-  createKDtree        ();  
-  findBoundingBox     ();
-  findMinMaxRot       ();
+  // createKDtree        ();  .. INTERPOLATE
+  // findBoundingBox     ();
+  // findMinMaxRot       ();
   allocateArrays      ();
       
 }
@@ -35,7 +35,11 @@ void ses3d::read () {
     
     readFile (col, "colatitude");
     readFile (lon, "longitude");
-    readFile (rad, "radius");        
+    readFile (rad, "radius");    
+    
+  }
+  
+  if (myRank == 0 && direction == "interpolate") {    
 
     if (symSys == "tti") {
   
@@ -189,35 +193,63 @@ void ses3d::readFile (vector<vector<double>> &vec, string type) {
     
   }
   
-  int coordinateFixer;
-  if (type == "colatitude" || type == "longitude" || type == "radius") {
-    coordinateFixer = 1;
-  } else {
-    coordinateFixer = 0;
+  // push back min/max regional radius values.
+  if (type == "radius") {
+    
+    for (size_t i=0; i<dummy.size (); i++) {
+      minRadRegion.push_back (*std::min_element (dummy[i].begin (), dummy[i].end ()));
+      maxRadRegion.push_back (*std::max_element (dummy[i].begin (), dummy[i].end ()));
+    }
+    
   }
     
-  vec.resize (numModelRegions);
-  for (size_t i=0; i<dummy.size(); i++) {
+  if (type == "colatitude" || type == "longitude" || type == "radius") {
+    vec.resize (numModelRegions);
+    for (size_t i=0; i<dummy.size(); i++) {
   
-    vec[i].reserve (dummy[i].size()-coordinateFixer);
-    for (size_t j=0; j<dummy[i].size()-coordinateFixer; j++) {
-      vec[i].push_back ((dummy[i][j] + dummy[i][j+1]) / 2.);
+      vec[i].reserve (dummy[i].size()-1);
+      for (size_t j=0; j<dummy[i].size()-1; j++) {
+        vec[i].push_back ((dummy[i][j] + dummy[i][j+1]) / 2.);
+      }
     }
+  } else {
+    vec = dummy;
   }
   
 }
 
 void ses3d::write () {
   
-  string fName = "rho";
-  std::cout << "Writing: " << fName << std::endl;
-  ofstream myfile (fName, ios::out);
+  construct ();
   
-  myfile << rho.size () << "\n";
-  for (size_t r=0; r<rho.size (); r++) {
-    myfile << rho[r].size () << "\n";
-    for (size_t i=0; i<rho[r].size (); i++) {
-      myfile << rho[r][i] << "\n";
+  if (symSys.compare (0, 3, "tti") == 0) {
+
+    writeFile (rho, "rho");
+    writeFile (vpv, "vpv");
+    writeFile (vph, "vph");
+    writeFile (vsv, "vsv");
+    writeFile (vsh, "vsh");    
+    
+  }
+  
+}
+
+void ses3d::writeFile (std::vector<std::vector<double>> &vec, std::string fName) {
+  
+  // Function to write out a file in the ses3d region format.
+  
+  std::string omd = path + "/CEM";
+  
+  mkdir (omd.c_str (), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+  
+  std::cout << "Writing: " << fName << std::endl;
+  ofstream myfile (omd + "/" + fName, ios::out);
+  
+  myfile << vec.size () << "\n";
+  for (size_t r=0; r<vec.size (); r++) {
+    myfile << vec[r].size () << "\n";
+    for (size_t i=0; i<vec[r].size (); i++) {
+      myfile << vec[r][i] << "\n";
     }
   }
   

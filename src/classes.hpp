@@ -6,6 +6,7 @@
 #include <set>
 
 #include <dirent.h>
+#include <sys/stat.h>
 #include <omp.h>
 
 #include "kdtree.h"
@@ -70,12 +71,18 @@ std::vector<double> returnVector (double &x, double &y, double &z);
 double interpolateTet (std::vector<double> &vec, size_t &n0, size_t &n1, size_t &n2, size_t &n3,
                        double &l0, double &l1, double &l2, double &l3); 
                        
-                       std::vector<string> getRequiredChunks (model &mod);                             
+std::vector<string> getRequiredChunks (model &mod);    
+size_t vectorSize2d (std::vector<std::vector<double>>);                         
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
 const double CLOSE   = 1;
 const double TINY    = 0.01;
+const double BIGTINY = 0.1;
+const double RAD_400 = 5971.0;
+const double RAD_670 = 5701.0;
+const double RAD_CMB = 3480.0;
+const double RAD_ICB = 1221.0;
 
 class model {
   
@@ -135,6 +142,8 @@ protected:
   std::vector<double> xMax, yMax, zMax;
   std::vector<double> lonMin, lonMax;
   std::vector<double> colMin, colMax;
+  
+  std::vector<double> minRadRegion, maxRadRegion;
 
   double xCtr, yCtr, zCtr;  
   
@@ -155,6 +164,7 @@ protected:
   void findMinMaxRadius  ();  
   void readParameterFile ();
   void allocateArrays    ();
+  void construct         ();
   
   
   int testBoundingBox  (double x, double y, double z);
@@ -169,6 +179,9 @@ public:
   std::set<std::string> colChunks;
   std::set<std::string> lonChunks;
   std::vector<double> rMax, rMin;  
+  std::vector<std::string> regionNames;
+  std::string direction;
+  
   
 
 };
@@ -200,6 +213,7 @@ public:
 protected:
   
   void readFile          (std::vector<std::vector<double>> &vec, std::string type);
+  void writeFile         (std::vector<std::vector<double>> &vec, std::string type);
   void broadcast         ();
   void convert2Cartesian ();
   void convert2Radians   ();
@@ -278,6 +292,7 @@ protected:
   void createKDTree ();
   void getMinMaxDimensions ();
   bool checkBoundingBox (double &x, double &y, double &z);
+  bool checkInterpolatingRegion (double &x, double &y, double &z, double minRad, double maxRad);
   void getSideSets ();
   
   void checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
@@ -344,8 +359,8 @@ protected:
   void getElemNumMap    ();
   void openFile         ();  
   void closeFile        ();
-  void getConnectivity  ();
-  void getNodeSets      ();
+  void getConnectivity  (std::vector<std::string> regionNames);
+  void getNodeSets      (std::vector<std::string> regionNames);
   void getSideSets      ();
       
   int getNumElemInBlock (int &elmBlockId);
@@ -365,7 +380,7 @@ protected:
 public:
   
   // Constructor.
-  exodus_file   (std::string);
+  exodus_file   (std::string, std::vector<std::string>);
   ~exodus_file  ();
   
   void printMeshInfo  ();
@@ -394,5 +409,6 @@ public:
   
   void eumod (double &, double &, double &, double &);
   void prem_no220 (double &, double &, double &, double &);
+  void eumod_vpPrem_vsPremLt670 (double &, double &, double &, double &);
           
 };

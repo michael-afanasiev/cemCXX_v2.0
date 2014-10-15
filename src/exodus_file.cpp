@@ -5,7 +5,7 @@ using namespace std;
 
 /* PUBLIC FUNCTIONS */
 
-exodus_file::exodus_file (std::string fname) {
+exodus_file::exodus_file (std::string fname, std::vector<std::string> regionNames) {
 
   // Class constructor for exodus fileName. Populates connectivity and book keeping arrays.
   
@@ -16,8 +16,8 @@ exodus_file::exodus_file (std::string fname) {
   allocate        ();
   getNodeNumMap   ();
   getElemNumMap   (); 
-  getConnectivity ();
-  getNodeSets     ();
+  getConnectivity (regionNames);
+  getNodeSets     (regionNames);
   // getSideSets     ();
   
   printMeshInfo ();
@@ -48,29 +48,83 @@ void exodus_file::openFile () {
     
 }
 
-// void exodus_file::getSideSets () {
-//
-//   connectivitySize = connectivity.size ();
-//   for (size_t i=0; i<connectivitySize; i++) {
-//
-//     size_t posIter = connectivity[i] - 1;
-//
-//     double radius = getRadius (x[posIter], y[posIter], z[posIter])
-//
-//
-//     // Populate boolean array with 'onSideSet' truth values.
-//     size_t connectivitySize = connectivity.size ();
-//     size_t faceArraySize    = faces.size ();
-//     onSideSet.resize (connectivitySize);
-//     std::fill (onSideSet.begin (), onSideSet.end (), false);
-//     for (size_t i=0; i<faceArraySize; i++) {
-//
-//       onSideSet[faces[i]] = true;
-//
-//     }
-//   }
-//
-// }
+void exodus_file::getSideSets () {
+
+  // Get side set ids.
+  sideSetNumMap = new int [numSideSets];
+  exodusCheck (ex_get_side_set_ids (idexo, sideSetNumMap), "ex_get_side_set_ids");
+  
+  // Determine which node set to get based on region name, and only read that nodeset in.    
+  
+  for (size_t i=0; i<numSideSets; i++) {
+      
+    int numSideThisSet, numDfThisSet;
+    
+    exodusCheck (ex_get_side_set_param (idexo, sideSetNumMap[i], &numSideThisSet, &numDfThisSet), 
+      "ex_get_side_set_param");
+
+    sideSetElem.resize (numSideThisSet);
+    sideSetSide.resize (numSideThisSet);
+    int *scratchSideElem = new int [numSideThisSet];      
+    int *scratchSideSide = new int [numSideThisSet];
+    
+    exodusCheck (ex_get_side_set (idexo, sideSetNumMap[i], scratchSideElem, scratchSideSide), 
+      "ex_get_side_set_node_list");
+    
+    std::copy (scratchSideElem, scratchSideElem+numSideThisSet, sideSetElem.begin ());
+    std::copy (scratchSideSide, scratchSideSide+numSideThisSet, sideSetSide.begin ());  
+        
+    delete [] scratchSideElem;
+    delete [] scratchSideSide;              
+  
+    // Generate scratch array for side set identification.
+    std::vector<int> faces (numSideThisSet*numSidePerElem);
+    size_t k=0; size_t numSideThisSetIter = numSideThisSet;
+    for (size_t i=0; i<numSideThisSetIter; i++) {
+    
+      int elemNo = sideSetElem[i];
+      int faceNo = sideSetSide[i];
+    
+      int n1=0, n2=0, n3=0;
+      if        (faceNo == 1) {
+        n1 = elemNo*numNodePerElem+0;
+        n2 = elemNo*numNodePerElem+1;
+        n3 = elemNo*numNodePerElem+3;
+      } else if (faceNo == 2) {
+        n1 = elemNo*numNodePerElem+1;
+        n2 = elemNo*numNodePerElem+2;
+        n3 = elemNo*numNodePerElem+3;      
+      } else if (faceNo == 3) {
+        n1 = elemNo*numNodePerElem+0;
+        n2 = elemNo*numNodePerElem+2;
+        n3 = elemNo*numNodePerElem+3;      
+      } else if (faceNo == 4) {
+        n1 = elemNo*numNodePerElem+0;
+        n2 = elemNo*numNodePerElem+1;
+        n3 = elemNo*numNodePerElem+2;   
+      }
+      
+      faces[k]   = n1;
+      faces[k+1] = n2;
+      faces[k+2] = n3;
+    
+      k += 3;
+    
+    }
+    
+    // Populate boolean array with 'onSideSet' truth values.
+    size_t connectivitySize = connectivity.size ();
+    size_t faceArraySize    = faces.size ();
+    onSideSet.resize (connectivitySize);
+    std::fill (onSideSet.begin (), onSideSet.end (), false);
+    for (size_t i=0; i<faceArraySize; i++) {
+    
+      onSideSet[faces[i]] = true;      
+    
+    }  
+  }
+
+}
 
 std::vector<bool> exodus_file::returnOnSideSet () {
   
@@ -200,9 +254,7 @@ std::vector<int> exodus_file::returnSideSetElem () {
   
 }
 
-void exodus_file::getNodeSets () {
-  
-  std::string regionName          = "Japan";
+void exodus_file::getNodeSets (std::vector<std::string> regionNames) {
   
   // Reserve space for the array of nodeset names.
   char *nameDum[numNodeSets];
@@ -218,32 +270,41 @@ void exodus_file::getNodeSets () {
   exodusCheck (ex_get_names (idexo, EX_NODE_SET, nameDum), "ex_get_names");
   
   // Determine which node set to get based on region name, and only read that nodeset in.    
+  // Initialize the iterator which will be used to copy to master connectivity array.
+  vector<int>::iterator  next=interpolatingSet.begin();
   for (size_t i=0; i<numNodeSets; i++) {
     
-    if (strcmp (nameDum[i], regionName.c_str ()) == 0) {
+    if (std::find (regionNames.begin (), regionNames.end (), nameDum[i]) == regionNames.end ())
+      continue;
       
-      int numNodeThisSet = getNumNodeInSet (nodeSetNumMap[i]);
-      
-      interpolatingSet.resize (numNodeThisSet);
-      int *scratch       = new int [numNodeThisSet];      
-      
-      exodusCheck (ex_get_node_set (idexo, nodeSetNumMap[i], scratch), "ex_get_node_set");
-      
-      std::copy (scratch, scratch+numNodeThisSet, interpolatingSet.begin ());
-      
-    }
+    int numNodeThisSet = getNumNodeInSet (nodeSetNumMap[i]);    
+    int *scratch       = new int [numNodeThisSet];      
+    
+    exodusCheck (ex_get_node_set (idexo, nodeSetNumMap[i], scratch), "ex_get_node_set");
+    
+    // Copy the scratch array to master array and advance the iterator.
+    interpolatingSet.insert (next, scratch, scratch+numNodeThisSet);
+    next = interpolatingSet.end ();
+    
+    delete [] scratch;
   
   }
 
 }
 
-void exodus_file::getConnectivity () {
+void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
   
   // Gets the connectivty array. Merges the connectivity arrays from each block into one master
   // connectivity array.
   
-  // Reserve space for the 1 dimension of the connectivity array.
-  connectivity.resize (numElem*numNodePerElem);
+  // Reserve space for the array of block names.
+  char *nameDum[numNodeSets];
+  for (size_t i=0; i<numNodeSets; i++) {
+    nameDum[i] = new char [MAX_LINE_LENGTH+1];
+  }  
+  
+  // Get block set names.
+  exodusCheck (ex_get_names (idexo, EX_ELEM_BLOCK, nameDum), "ex_get_names");  
   
   // Get element block ids.
   blockNumMap = new int [numElemBlock];
@@ -253,13 +314,17 @@ void exodus_file::getConnectivity () {
   vector<int>::iterator  next=connectivity.begin();
   for (size_t i=0; i<numElemBlock; i++) {
 
+    if (std::find (regionNames.begin (), regionNames.end (), nameDum[i]) == regionNames.end ())
+      continue;
+
     // Initialze scratch array to pull from exodus file.
     int numElemThisBlock = getNumElemInBlock (blockNumMap[i]);
     int *scratch         = new int [numElemThisBlock*numNodePerElem];
     exodusCheck (ex_get_elem_conn (idexo, blockNumMap[i], scratch), "ex_get_elem_conn");
     
     // Copy the scratch array to master array and advance the iterator.
-    next = std::copy (scratch, scratch+numElemThisBlock*numNodePerElem, next);
+    connectivity.insert (next, scratch, scratch+numElemThisBlock*numNodePerElem);
+    next = connectivity.end ();
     
     // Clear scratch memory.
     delete [] scratch;

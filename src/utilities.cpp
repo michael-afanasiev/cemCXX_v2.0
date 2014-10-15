@@ -250,7 +250,8 @@ void broadcast2DVector (vector<vector<double>> &bVector) {
   bool broadcast=true;
   if (MPI::COMM_WORLD.Get_rank () == 0)
     if (bVector.empty ())
-      broadcast = false;      
+      broadcast = false; 
+             
   MPI::COMM_WORLD.Bcast (&broadcast, 1, MPI::BOOL, 0);  
   if (broadcast) {
     vector<int> axesSize;
@@ -279,7 +280,21 @@ void broadcast2DVector (vector<vector<double>> &bVector) {
         std::copy (recvBuf, recvBuf+size, bVector[i].begin ());      
       delete [] recvBuf;      
     }
-  }  
+  }
+    
+}
+
+size_t vectorSize2d (std::vector<std::vector<double>> vec) {
+  
+  size_t totalSize =0;
+  for (size_t r=0; r<vec.size (); r++) {
+    
+    totalSize += vec[r].size ();
+
+  }
+  
+  return totalSize;
+  
 }
 
 std::vector<double> returnVector (double &x, double &y, double &z) {
@@ -298,8 +313,8 @@ double getRadius (double &x, double &y, double &z) {
   
   double rad = sqrt (x*x + y*y + z*z);
   
-  if (rad > 6371)
-    rad = 6371;
+  // if (rad > 6371)
+  //   rad = 6371;
   
   return rad;
   

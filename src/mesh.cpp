@@ -46,10 +46,12 @@ void mesh::interpolate (model &mod) {
   
   intensivePrint ("Interpolating.");
   size_t setSize = interpolatingSet.size ();
-  int percent = setSize / 100.;
+  int percent = (setSize / omp_get_max_threads ()) / 100.;
     
   int pCount = 0;
   int pIter  = 0;
+  
+#pragma omp parallel for firstprivate (pCount, pIter)
   for (size_t i=0; i<setSize; i++) {
          
     // extract node number.
@@ -58,37 +60,103 @@ void mesh::interpolate (model &mod) {
     // find closest point [region specific].
     for (size_t r=0; r<mod.numModelRegions; r++) {
 
-      kdres *set = kd_nearest3 (mod.trees[r], x[nodeNum], y[nodeNum], z[nodeNum]);
-      void *ind  = kd_res_item_data (set);
-      int point  = * (int *) ind;
-      kd_res_free (set); 
+      bool inRegion = checkInterpolatingRegion (x[nodeNum], y[nodeNum], z[nodeNum], 
+                                                mod.minRadRegion[r], mod.maxRadRegion[r]);
+                                                
+                                                
+      if (inRegion) {
+        
+        kdres *set = kd_nearest3 (mod.trees[r], x[nodeNum], y[nodeNum], z[nodeNum]);
+        void *ind  = kd_res_item_data (set);
+        int point  = * (int *) ind;
+        kd_res_free (set); 
       
-      elasticTensor moduli = breakdown (mod, x[nodeNum], y[nodeNum], z[nodeNum], r, nodeNum, point);
-      c66[nodeNum] = moduli.c66;
+        elasticTensor moduli = breakdown (mod, x[nodeNum], y[nodeNum], z[nodeNum], 
+                                          r, nodeNum, point);
+
+        c11[nodeNum] = moduli.c11;
+        c12[nodeNum] = moduli.c12;
+        c13[nodeNum] = moduli.c13;
+        c14[nodeNum] = moduli.c14;
+        c15[nodeNum] = moduli.c15;
+        c16[nodeNum] = moduli.c16;
+        c22[nodeNum] = moduli.c22;
+        c23[nodeNum] = moduli.c23;
+        c24[nodeNum] = moduli.c24;
+        c25[nodeNum] = moduli.c25;
+        c26[nodeNum] = moduli.c26;
+        c33[nodeNum] = moduli.c33;
+        c34[nodeNum] = moduli.c34;
+        c35[nodeNum] = moduli.c35;
+        c36[nodeNum] = moduli.c36;
+        c44[nodeNum] = moduli.c44;
+        c45[nodeNum] = moduli.c45;
+        c46[nodeNum] = moduli.c46;
+        c55[nodeNum] = moduli.c55;
+        c56[nodeNum] = moduli.c56;
+        c66[nodeNum] = moduli.c66;
+        rho[nodeNum] = moduli.rho;
+        
+      }
       
     }
     
-    pCount++;    
-    if (pCount % percent == 0) {
-      cout << pIter << " %\r" << flush;
-      pIter++;
-    }        
+    if (omp_get_thread_num () == 0) {
+      pCount++;
+      if (pCount % percent == 0) {
+        cout << pIter << " %\r" << flush;
+        pIter++;
+      }
+    }
          
   }
   
+  cout << grn << "Done." << rst << endl;
+  
+}
+
+bool mesh::checkInterpolatingRegion (double &x, double &y, double &z, double minReg, 
+                                     double maxReg) {
+                                       
+  // Check which kd-tree to extract from.                                                                              
+  double radius = getRadius (x, y, z);
+
+  if (minReg == radMin || maxReg == radMax)
+    return true;
+  
+  if (minReg == radMax || maxReg == radMin)
+    return false;
+  
+  if (minReg > radMin && minReg < radMax) {
+    if (abs (radius - minReg) < BIGTINY && (radius - minReg) >= 0)
+      return false;
+  } else if (maxReg > radMin && maxReg < radMax) {
+    if (abs (radius - maxReg) < BIGTINY && (radius - maxReg) >= 0)
+      return true;
+  }
+      
+  if (radius <= maxReg && radius >= minReg) {
+    return true;
+  } else {
+    return false;
+  }        
+                                     
 }
 
 void mesh::createKDTree () {
   
   intensivePrint ("Creating KD-tree.");
-  datKD.resize (numNodes);
   
   tree = kd_create (3);
   
-  for (size_t i=0; i<numNodes; i++) {
+  size_t interpolatingSetSize = interpolatingSet.size ();
+  datKD.resize (interpolatingSetSize);
+  
+  for (size_t i=0; i<interpolatingSetSize; i++) {
     
-    datKD[i] = i;
-    kd_insert3 (tree, x[i], y[i], z[i], &datKD[i]);
+    size_t nodeNum = interpolatingSet[i] - 1;
+    datKD[i] = nodeNum;
+    kd_insert3 (tree, x[nodeNum], y[nodeNum], z[nodeNum], &datKD[i]);
     
   }  
   
@@ -104,25 +172,28 @@ void mesh::extract (model &mod) {
   double searchRadius      = 1.;
   const double ONE_PERCENT = 0.01;
   const double TEN_PERCENT = 0.10;
-  size_t sizeConnect       = connectivity.size ();
+  size_t sizeConnect       = connectivity.size ();  
+  int totalLoops           = 0;
   
   // Loop over model regions.  
   for (size_t r=0; r<mod.numModelRegions; r++) {
-
-    // Initialize percentage reporting.
+    
+    if (mod.maxRadRegion[r] <= radMin || mod.minRadRegion[r] >= radMax)
+      continue;
+            
     size_t numParams = mod.x[r].size ();
-    int percent      = (numParams / omp_get_num_threads ()) / 100.;
-    int pCount       = 0;
+    
+    // Initialize percentage reporting.
+    int percent      = (numParams) / 100.;
     int pIter        = 0;    
             
-    // PARALLEL BLOCK. Loop over all parameters in a region.
-#pragma omp parallel for firstprivate (searchRadius, pCount, pIter)
+#pragma omp parallel for firstprivate (searchRadius, r) schedule (guided)
     for (size_t i=0; i<numParams; i++) {
 
       double xTarget = mod.x[r][i];
       double yTarget = mod.y[r][i];
       double zTarget = mod.z[r][i];
-      
+            
       // Check if we're within the (coarse) mesh bounds.
       if (checkBoundingBox (xTarget, yTarget, zTarget)) {
         
@@ -220,10 +291,11 @@ void mesh::extract (model &mod) {
                   mod.c55[r][i] = interpolateTet (c55, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.rho[r][i] = getRadius (p0[0], p0[1], p0[2]);//interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
                   
                   // Keep the search radius tight, and break out of loop.
                   searchRadius = searchRadius - searchRadius * ONE_PERCENT;
+                  
                   break;               
                 
                 }            
@@ -237,22 +309,27 @@ void mesh::extract (model &mod) {
         
           // Increase the search radius if we haven't yet found our man.
           if (not found)
-            searchRadius = searchRadius + searchRadius * TEN_PERCENT;              
+            searchRadius = searchRadius + searchRadius * TEN_PERCENT;     
+
+          if (searchRadius > 100)
+            cout << searchRadius << endl;
 
           // If we actually have a results set, let's free the memory needed for the next pass.
           if (kd_res_size (set) != 0)
             kd_res_free (set);
           
         }                        
-      }
-  
-      // Percent reporting TODO move this to a function.
-      pCount++;
-      if (pCount % percent == 0) {
-        cout << pIter << " %\r" << flush;
-        pIter++;
-      }
+      }  
       
+      // Percent reporting TODO move this to a function.      
+#pragma omp critical
+      {
+        totalLoops++;      
+        if (totalLoops % percent == 0) {
+          cout << pIter << " %\r" << flush;
+          pIter++;
+        }
+      }      
     }
         
   }
@@ -285,6 +362,15 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
                               
   // Determines the distance from an arbitrary point which may be just outside the mesh. Then, this
   // point is modified and projected onto the border of the mesh.
+                              
+  if (abs (p0[0]-xMin) < CLOSE)
+    p0[0] = p0[0] + CLOSE;
+
+  if (abs (p0[0]-yMin) < CLOSE)
+    p0[0] = p0[1] + CLOSE;
+
+  if (abs (p0[0]-zMin) < CLOSE)
+    p0[0] = p0[2] + CLOSE;
 
   // Get distance to point from origin. Make a plane from the 3 points defining a mesh edge face.
   std::vector<double> orig (3, 0);
@@ -302,24 +388,24 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
   // Re-project with the new normal.
   dist = projWonV_Dist (v0, n0, orig);
   
-  // If we're close a certain mesh edge, check to see if we're actuall off the edge. If we are
+  // If we're close a certain mesh edge, check to see if we're actually off the edge. If we are
   // project the point down (or up) so that it lies within the plane of the closest tet face. 
   // Tiny is necessary here to deal with small floating point errors.
   // Current settings: tiny (0.01), close (1).
   if        (pRadius > dist && (abs (pRadius-radMax) < CLOSE)) {
-    
+
     double dif = abs (radMax - dist);
     p0[0] = p0[0] + (n0[0]) * (dif + TINY);
     p0[1] = p0[1] + (n0[1]) * (dif + TINY);
-    p0[2] = p0[2] + (n0[2]) * (dif + TINY);   
-     
+    p0[2] = p0[2] + (n0[2]) * (dif + TINY);
+
   } else if (pRadius < dist && (abs (pRadius-radMin) < CLOSE)) {
-    
+
     double dif = abs (radMin - dist);
     p0[0] = p0[0] + n0[0] * (dif + TINY) * (-1);
     p0[1] = p0[1] + n0[1] * (dif + TINY) * (-1);
-    p0[2] = p0[2] + n0[2] * (dif + TINY) * (-1);        
-    
+    p0[2] = p0[2] + n0[2] * (dif + TINY) * (-1);
+
   }
            
 }
@@ -383,8 +469,28 @@ double mesh::returnUpdate1d (vector<vector<double>> &vec, double &valMsh, size_t
                         
 void mesh::dump (exodus_file &eFile) {
   
-  eFile.writeVariable (c11, "du1");
+  eFile.writeVariable (c11, "c11");
+  eFile.writeVariable (c12, "c12");
+  eFile.writeVariable (c13, "c13");
+  eFile.writeVariable (c14, "c14");
+  eFile.writeVariable (c15, "c15");
+  eFile.writeVariable (c16, "c16");
+  eFile.writeVariable (c22, "c22");
+  eFile.writeVariable (c23, "c23");
+  eFile.writeVariable (c24, "c24");
+  eFile.writeVariable (c25, "c25");
+  eFile.writeVariable (c26, "c26");
+  eFile.writeVariable (c33, "c33");
+  eFile.writeVariable (c34, "c34");
+  eFile.writeVariable (c35, "c35");
+  eFile.writeVariable (c36, "c36");
+  eFile.writeVariable (c44, "c44");
+  eFile.writeVariable (c45, "c45");
+  eFile.writeVariable (c46, "c46");
+  eFile.writeVariable (c55, "c55");
+  eFile.writeVariable (c56, "c56");
   eFile.writeVariable (c66, "c66");
+  eFile.writeVariable (rho, "rho");
   
 }
 
@@ -394,8 +500,7 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
                         
   elasticTensor moduli;
   if (mod.symSys.compare (0, 3, "tti") == 0) {
-    
-    
+        
     // Initialize values to mesh values.
     double vshMsh = sqrt (c44[mshInd] / rho[mshInd]);
     double vsvMsh = sqrt (c55[mshInd] / rho[mshInd]);
@@ -408,18 +513,22 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
     double vshNew = vshMsh;
     double vpvNew = vpvMsh;
     double vphNew = vphMsh;
-
   
     if (mod.interpolationType == "add_to_1d_background") {
     
       // need radius for 1d background.
       double rad = getRadius (x, y, z);
+      // if (abs (rad - RAD_400) < TINY && radMin < RAD_400)
+      //   rad = 5970.5;
     
       // get 1d background model.
       double vs1d, vp1d, rho1d;
       background_models backgroundMod;
       if (mod.onedBackground == "europe_model")
         backgroundMod.eumod (rad, vs1d, vp1d, rho1d);
+
+      if (mod.onedBackground == "eumod_vpPrem_vsPremLt670")
+        backgroundMod.eumod_vpPrem_vsPremLt670 (rad, vs1d, vp1d, rho1d);
     
       if (mod.onedBackground == "prem_no220")
         backgroundMod.prem_no220 (rad, vs1d, vp1d, rho1d);

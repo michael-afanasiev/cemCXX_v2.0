@@ -2,8 +2,7 @@ CXX      = /opt/local/bin/mpic++
 CC       = /usr/local/bin/gcc-4.8
 
 CXXFLAGS = -O3 -std=c++11 -Wall -I/opt/local/include -fopenmp
-CFLAGS   = -O3
-LDFLAGS  = -L/opt/local/lib -lexoIIv2c -lnetcdf -lhdf5_hl -lhdf5  -lz -lcurl -fopenmp
+LDFLAGS  = -L/opt/local/lib -lexoIIv2c -lnetcdf -lhdf5_hl -lhdf5  -lz -lcurl -fopenmp -lkdtree
 
 OBJECTS		= \
 	./obj/main.o \
@@ -13,8 +12,7 @@ OBJECTS		= \
 	./obj/mesh.o \
 	./obj/utilities.o \
 	./obj/background_models.o \
-	./obj/attenuation.o \
-	./obj/kdtree.o
+	./obj/attenuation.o
 	
 ./obj/%.o: ./src/%.cpp
 	@$(CXX) $(CXXFLAGS) -c -o $@ $<
