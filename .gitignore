@@ -29,8 +29,6 @@
 # Exodus files.
 *.e
 *.ex2
-<<<<<<< Updated upstream
-=======
 
 # Model files
 */block*
@@ -42,8 +40,5 @@
 # Param files
 mod/parameters.txt
 mod/CEM
-
 Makefile
 
-
->>>>>>> Stashed changes
