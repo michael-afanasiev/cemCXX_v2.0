@@ -334,6 +334,8 @@ void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
 }
 
 std::vector<int> exodus_file::returnConnectivity () {
+
+  // Just returns the previously found connectivity array.
   
   return connectivity;
   
@@ -341,6 +343,8 @@ std::vector<int> exodus_file::returnConnectivity () {
 
 std::vector<int> exodus_file::returnNodeNumMap () {
   
+  // Just returns the previously found node number map.
+
   return nodeNumMap;
   
 }
@@ -348,6 +352,8 @@ std::vector<int> exodus_file::returnNodeNumMap () {
 
 void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y, 
                           std::vector<double> &z) {
+
+  // Passes the xyz arrays from the exodus file.
   
   double *xmsh = new double [numNodes];
   double *ymsh = new double [numNodes];
@@ -367,6 +373,8 @@ void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y,
 }
 
 std::vector<double> exodus_file::getVariable (std::string varName) {
+
+  // Reads a variable from the exodus file with the name 'varName'.
 
   // get number of variables stored in file.
   int numVars;

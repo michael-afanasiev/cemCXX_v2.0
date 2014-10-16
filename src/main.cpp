@@ -28,7 +28,7 @@ int main () {
   
   if (mod->direction == "extract")
     mod->write ();
-    
+
   MPI::Finalize ();
     
 }

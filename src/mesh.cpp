@@ -52,6 +52,7 @@ void mesh::interpolate (model &mod) {
   int pIter  = 0;
   
 #pragma omp parallel for firstprivate (pCount, pIter)
+
   for (size_t i=0; i<setSize; i++) {
          
     // extract node number.
@@ -218,7 +219,7 @@ void mesh::extract (model &mod) {
     
     if (mod.maxRadRegion[r] <= radMin || mod.minRadRegion[r] >= radMax)
       continue;
-            
+       
     size_t numParams = mod.x[r].size ();
     
     // Initialize percentage reporting.
@@ -235,7 +236,7 @@ void mesh::extract (model &mod) {
         
       // Check if we're within the (coarse) mesh bounds.
       if (checkBoundingBox (xTarget, yTarget, zTarget)) {
-        
+
         // Assume we haven't found the enclosing tet, and begin searching.
         bool found = false;
         while (not found) {
@@ -411,11 +412,11 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
   if (abs (p0[0]-xMin) < CLOSE)
     p0[0] = p0[0] + CLOSE;
 
-  if (abs (p0[0]-yMin) < CLOSE)
-    p0[0] = p0[1] + CLOSE;
+  if (abs (p0[1]-yMin) < CLOSE)
+    p0[1] = p0[1] + CLOSE;
 
-  if (abs (p0[0]-zMin) < CLOSE)
-    p0[0] = p0[2] + CLOSE;
+  if (abs (p0[2]-zMin) < CLOSE)
+    p0[2] = p0[2] + CLOSE;
 
   // Get distance to point from origin. Make a plane from the 3 points defining a mesh edge face.
   std::vector<double> orig (3, 0);
@@ -432,7 +433,7 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
   
   // Re-project with the new normal.
   dist = projWonV_Dist (v0, n0, orig);
-  
+
   // If we're close a certain mesh edge, check to see if we're actually off the edge. If we are
   // project the point down (or up) so that it lies within the plane of the closest tet face. 
   // Tiny is necessary here to deal with small floating point errors.

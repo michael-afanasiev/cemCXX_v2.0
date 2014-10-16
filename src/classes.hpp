@@ -1,12 +1,14 @@
 #include <algorithm>
 #include <iostream>
-#include <vector>
 #include <fstream>
+#include <vector>
 #include <cmath>
 #include <set>
 
-#include <dirent.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <string.h>
 #include <omp.h>
 
 #include "kdtree.h"
@@ -46,33 +48,24 @@ void broadcastInteger  (int &);
 int  getRank           ();
 
 // Math functions
-double deg2Rad                      (double &deg);
-double rad2Deg                      (double &rad);
-double getRadius                    (double &x, double &y, double &z);
-double projWonV_Dist                (std::vector<double> &x, std::vector<double> &v, 
-                                     std::vector<double> &x0);
-                                    
-void xyz2ColLonRad                  (double &x, double &y, double &z, double &col, double &lon, 
-                                     double &rad);                                                                          
-void colLonRad2xyz                  (double &x, double &y, double &z, double &col, double &lon, 
-                                     double &rad); 
-                                     
-bool testInsideTet                  (vector<double> &v0, 
-                                     vector<double> &v1, 
-                                     vector<double> &v2, 
-                                     vector<double> &v3,
-                                     vector<double> &p0,
-                                     double &l1, double &l2, double &l3, double &l4);
-                                    
-std::vector<double> getNormalVector (std::vector<double> &A, std::vector<double> &B, 
-                                     std::vector<double> &C);
-                                     
-std::vector<double> returnVector (double &x, double &y, double &z);     
-double interpolateTet (std::vector<double> &vec, size_t &n0, size_t &n1, size_t &n2, size_t &n3,
-                       double &l0, double &l1, double &l2, double &l3); 
+void xyz2ColLonRad     (double &x, double &y, double &z, double &col, double &lon, double &rad);                                                                         
+void colLonRad2xyz     (double &x, double &y, double &z, double &col, double &lon, double &rad);
+
+bool testInsideTet     (vector<double> &v0, vector<double> &v1, vector<double> &v2, 
+  vector<double> &v3, vector<double> &p0,double &l1, double &l2, double &l3, double &l4);
                        
+size_t vectorSize2d    (std::vector<std::vector<double>>);                        
+
+double deg2Rad         (double &deg);
+double rad2Deg         (double &rad);
+double getRadius       (double &x, double &y, double &z);
+double projWonV_Dist   (std::vector<double> &x, std::vector<double> &v, std::vector<double> &x0);
+double interpolateTet  (std::vector<double> &vec, size_t &n0, size_t &n1, size_t &n2, size_t &n3, 
+  double &l0, double &l1, double &l2, double &l3); 
+                       
+std::vector<double> getNormalVector   (std::vector<double> &A, std::vector<double> &B, std::vector<double> &C);
+std::vector<double> returnVector      (double &x, double &y, double &z);     
 std::vector<string> getRequiredChunks (model &mod);    
-size_t vectorSize2d (std::vector<std::vector<double>>);                         
 
 // ###### global variables ######
 const double R_EARTH = 6371.0;
@@ -92,17 +85,16 @@ protected:
   
   int myRank;
   int worldSize;
-      
-  // book keeping.
+  
+  // Parameter file.
   std::string path;
   std::string symSys;      
   std::string interpolationType;
   std::string convert_to_1_second;
   std::string onedBackground;
-  
-  size_t numModelParams=0;
+ 
+  // Number of model regions.
   size_t numModelRegions=0;
-  
   std::vector<int> regionSize;
   
   // Spherical co-ordinate data.
@@ -110,12 +102,6 @@ protected:
   
   // Cartesian co-ordinate data.
   std::vector<std::vector<double>> x, y, z;
-  
-  // Arrays to hold rotated co-ordinates.
-  std::vector<std::vector<double>> xSearch, ySearch, zSearch;
-  
-  // Rotation matrices for bounding box calculation.
-  rotation_matrix *rotateToYZ, *rotateToXY;
     
   // Elastic moduli.
   std::vector<std::vector<double>> c11, c12, c13, c14, c15, c16;
@@ -140,34 +126,23 @@ protected:
   // Model extremes [physical].
   std::vector<double> xMin, yMin, zMin;
   std::vector<double> xMax, yMax, zMax;
-  std::vector<double> lonMin, lonMax;
-  std::vector<double> colMin, colMax;
-  
   std::vector<double> minRadRegion, maxRadRegion;
 
+  // Center of box.
   double xCtr, yCtr, zCtr;  
-  
-  // Model extremes [rotated].
-  std::vector<double> xMinSearch, yMinSearch, zMinSearch;
-  std::vector<double> xMaxSearch, yMaxSearch, zMaxSearch;  
-  std::vector<double> lonMinSearch, lonMaxSearch, radMaxSearch;
-  std::vector<double> colMinSearch, colMaxSearch, radMinSearch;
+ 
 
-  double xCtrSearch, yCtrSearch, zCtrSearch;    
-  
+  // Internal functions.
   void rotate            ();
+  void construct         ();
   void findMinMax        ();
   void createKDtree      ();
-  void findMinMaxRot     ();
-  void findMinMaxPhys    ();
+  void allocateArrays    ();
   void findBoundingBox   ();
   void findMinMaxRadius  ();  
   void readParameterFile ();
-  void allocateArrays    ();
-  void construct         ();
   
-  
-  int testBoundingBox  (double x, double y, double z);
+  int testBoundingBox (double x, double y, double z);
   
 public:
   
@@ -175,11 +150,11 @@ public:
   virtual void read  (void) =0;
   virtual void write (void) =0;
   
-  std::string meshDirectory;
+  std::vector<std::string> regionNames;
   std::set<std::string> colChunks;
   std::set<std::string> lonChunks;
   std::vector<double> rMax, rMin;  
-  std::vector<std::string> regionNames;
+  std::string meshDirectory;
   std::string direction;    
 
 };
@@ -188,6 +163,7 @@ class attenuation {
 
 protected:
   
+  int    nRelaxationMechanisms=3;
   double tau_s[3];
   double D[3];
 
@@ -195,7 +171,6 @@ public:
   
   double QL6 (double &rad);
   double correctQL6 (double &rad);
-  int nRelaxationMechanisms=3;
 
 };
 
@@ -229,15 +204,15 @@ public:
   mesh (exodus_file &);  
   
   void dump        (exodus_file &);
-  void interpolate (model &);
   void extract     (model &);
-  
+  void interpolate (model &);
 
 protected:
   
   // co-ordinates.
   std::vector<double> x, y, z;  
-  
+ 
+  // exodus file name
   std::string eFileName;
   
   // extremes
@@ -270,8 +245,8 @@ protected:
   kdtree *tree;
   std::vector<int> datKD;
     
+  // Keep track of side sets.
   std::vector<bool> onSideSet;
-  
     
   // misc. mesh details.
   const size_t numNodePerElem=4;
@@ -349,30 +324,33 @@ protected:
   std::string fileName;
     
   // internal private functions.
-  void getXYZ (std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
-  void exodusCheck      (int, std::string);
   void getInfo          ();
   void allocate         ();
   void getNodeNumMap    ();
   void getElemNumMap    ();
   void openFile         ();  
   void closeFile        ();
+  void getSideSets      ();
   void getConnectivity  (std::vector<std::string> regionNames);
   void getNodeSets      (std::vector<std::string> regionNames);
-  void getSideSets      ();
+  void writeVariable    (std::vector<double> &var, std::string varName);
+  void exodusCheck      (int, std::string);
+  void getXYZ           (std::vector<double> &x, std::vector<double> &y, 
+    std::vector<double> &z);
       
   int getNumElemInBlock (int &elmBlockId);
   int getNumNodeInSet   (int &nodeSetId);
-  std::vector<double> getVariable (std::string varName);
-  std::vector<int> returnConnectivity ();
-  std::vector<int> returnNodeNumMap   ();
-  std::vector<int> returnInterpolatingSet ();
-  std::vector<int> returnSideSetSide ();
-  std::vector<int> returnSideSetElem ();
-  std::vector<bool> returnOnSideSet ();
+
+  std::vector<bool>   returnOnSideSet        ();
+  std::vector<int>    returnConnectivity     ();
+  std::vector<int>    returnNodeNumMap       ();
+  std::vector<int>    returnInterpolatingSet ();
+  std::vector<int>    returnSideSetSide      ();
+  std::vector<int>    returnSideSetElem      ();
+  std::vector<double> getVariable            (std::string varName);
+
   std::string returnName ();
   
-  void writeVariable (std::vector<double> &var, std::string varName);
 
       
 public:
@@ -405,8 +383,8 @@ class background_models {
 
 public:
   
-  void eumod (double &, double &, double &, double &);
-  void prem_no220 (double &, double &, double &, double &);
+  void eumod                    (double &, double &, double &, double &);
+  void prem_no220               (double &, double &, double &, double &);
   void eumod_vpPrem_vsPremLt670 (double &, double &, double &, double &);
           
 };
