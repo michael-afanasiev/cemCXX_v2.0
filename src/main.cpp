@@ -2,9 +2,33 @@
 
 int main () {
   
-  std::cout << "Hello world." << std::endl;
-  exodus_file exoFile ("col000-090.lon000-090.rad6361-6371.000.ex2");
-  exoFile.printMeshInfo ();
-  symmetry_system SST ("SSG");
+  MPI::Init ();
+
+  ses3d modType;
+  model *mod =& modType;
   
+  std::vector<std::string> fileNames;
+  std::vector<std::string>::iterator fileNameIter;
+  
+  fileNames = getRequiredChunks (*mod);
+    
+  for (fileNameIter=fileNames.begin (); fileNameIter!=fileNames.end(); ++fileNameIter) {
+    
+    exodus_file exo (*fileNameIter, mod->regionNames);  
+  
+    mesh msh (exo);
+    
+    if (mod->direction == "interpolate") {
+      msh.interpolate (*mod);
+      msh.dump (exo);      
+    } else if (mod->direction == "extract") {
+      msh.extract (*mod);
+    }        
+  }
+  
+  if (mod->direction == "extract")
+    mod->write ();
+    
+  MPI::Finalize ();
+    
 }
