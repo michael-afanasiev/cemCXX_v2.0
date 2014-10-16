@@ -180,9 +180,7 @@ public:
   std::set<std::string> lonChunks;
   std::vector<double> rMax, rMin;  
   std::vector<std::string> regionNames;
-  std::string direction;
-  
-  
+  std::string direction;    
 
 };
 

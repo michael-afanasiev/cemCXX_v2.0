@@ -19,13 +19,14 @@ ses3d::ses3d () {
   convert2Radians     ();
   convert2Cartesian   ();
   rotate              ();
-  // findMinMaxPhys      ();
   findMinMaxRadius    ();
-  // createKDtree        ();  .. INTERPOLATE
-  // findBoundingBox     ();
-  // findMinMaxRot       ();
-  allocateArrays      ();
-      
+
+  if (direction == "extract")
+    allocateArrays      ();
+  
+  if (direction == "interpolate")
+    createKDtree ();
+        
 }
 
 void ses3d::read () {

@@ -17,13 +17,18 @@ int main () {
     exodus_file exo (*fileNameIter, mod->regionNames);  
   
     mesh msh (exo);
-    // msh.interpolate (*mod);
-    msh.extract (*mod);
-    msh.dump (exo);
-        
+    
+    if (mod->direction == "interpolate") {
+      msh.interpolate (*mod);
+      msh.dump (exo);      
+    } else if (mod->direction == "extract") {
+      msh.extract (*mod);
+    }        
   }
   
-  mod->write ();  
+  if (mod->direction == "extract")
+    mod->write ();
+    
   MPI::Finalize ();
     
 }

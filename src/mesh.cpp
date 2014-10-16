@@ -55,7 +55,7 @@ void mesh::interpolate (model &mod) {
   for (size_t i=0; i<setSize; i++) {
          
     // extract node number.
-    size_t nodeNum = interpolatingSet[i] - 1;
+    size_t nodeNum = interpolatingSet[i] - 1;        
     
     // find closest point [region specific].
     for (size_t r=0; r<mod.numModelRegions; r++) {
@@ -120,6 +120,44 @@ bool mesh::checkInterpolatingRegion (double &x, double &y, double &z, double min
                                        
   // Check which kd-tree to extract from.                                                                              
   double radius = getRadius (x, y, z);
+  double col, lon, rad;
+  if        ((abs (radius - RAD_400) < TINY) && (radMax > RAD_400)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad + TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if ((abs (radius - RAD_400) < TINY) && (radMin < RAD_400)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad - TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if ((abs (radius - RAD_670) < TINY) && (radMax > RAD_670)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad + TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if ((abs (radius - RAD_670) < TINY) && (radMin < RAD_670)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad - TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if ((abs (radius - RAD_CMB) < TINY) && (radMax > RAD_CMB)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad + TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if ((abs (radius - RAD_CMB) < TINY) && (radMin < RAD_CMB)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad - TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if ((abs (radius - RAD_ICB) < TINY) && (radMax > RAD_ICB)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad + TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if ((abs (radius - RAD_ICB) < TINY) && (radMin < RAD_ICB)) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad - TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  } else if (radius > R_EARTH) {
+    xyz2ColLonRad (x, y, z, col, lon, rad);
+    rad = rad - TINY;
+    colLonRad2xyz (x, y, z, col, lon, rad);
+  }        
 
   if (minReg == radMin || maxReg == radMax)
     return true;
@@ -338,6 +376,8 @@ void mesh::extract (model &mod) {
     }
         
   }
+  
+  cout << grn << "Done." << rst << endl;
     
 }
 
