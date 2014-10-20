@@ -462,6 +462,7 @@ double mesh::returnUpdate (vector<vector<double>> &vec, double &valMsh,
   // Small function that checks for the existance of a vector, and returns its value at [reg][pnt],
   // in addition to additing the value to vslMsh. If the vector does not exist, it just returns 
   // valMsh. This is the workhorse function tti model updates.
+  //
                              
   if (not vec.empty ()) {
     return vec[reg][ind] + valMsh;
@@ -506,7 +507,11 @@ double mesh::returnUpdate1d (vector<vector<double>> &vec, double &valMsh, size_t
   // Overload that returns the parameter added to a 1d background model.
   
   if (not vec.empty ()) {
-    return val1d + vec[reg][ind];
+    if (abs (vec[reg][ind]) > 0.1) {
+      return val1d + vec[reg][ind];
+    } else {
+      return valMsh;
+    }
   } else {
     return valMsh;
   }

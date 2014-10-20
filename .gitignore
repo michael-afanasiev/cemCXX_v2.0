@@ -41,3 +41,6 @@
 mod/parameters.txt
 mod/CEM
 Makefile
+
+# Job files
+*.sbatch
