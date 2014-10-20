@@ -30,6 +30,7 @@ mesh::mesh (exodus_file &eFile) {
   c56              = eFile.getVariable ("c56");  
   c66              = eFile.getVariable ("c66");  
   rho              = eFile.getVariable ("rho");    
+  elv              = eFile.getVariable ("elv");
   
   connectivity     = eFile.returnConnectivity ();
   nodeNumMap       = eFile.returnNodeNumMap   ();
@@ -456,6 +457,32 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
            
 }
 
+void mesh::interpolateTopography (discontinuity &topo) {
+    
+  size_t setSize = x.size ();
+  
+  intensivePrint ("Interpolating topography.");
+  
+#pragma omp parallel for
+  for (size_t i=0; i< setSize; i++) {
+      
+    double col, lon, rad;            
+    int nodeNum = i;
+
+    xyz2ColLonRad (x[nodeNum], y[nodeNum], z[nodeNum], col, lon, rad);
+    kdres *set = kd_nearest3 (topo.tree, rad2Deg (col), rad2Deg (lon), R_EARTH);
+    void *ind  = kd_res_item_data (set);
+    int point  = * (int *) ind;
+    kd_res_free (set); 
+    
+    elv[i] = topo.elv[point];    
+    
+  }
+    
+  cout << grn << "Done." << rst << endl;
+      
+}
+
 double mesh::returnUpdate (vector<vector<double>> &vec, double &valMsh, 
                            size_t &reg, int &ind) {
                              
@@ -542,6 +569,7 @@ void mesh::dump (exodus_file &eFile) {
   eFile.writeVariable (c56, "c56");
   eFile.writeVariable (c66, "c66");
   eFile.writeVariable (rho, "rho");
+  eFile.writeVariable (elv, "elv");
   
 }
 

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <cmath>
 #include <set>
@@ -19,6 +20,7 @@ using namespace std;
 // ###### classes ######
 class background_models;
 class rotation_matrix;
+class discontinuity;
 class elasticTensor;
 class exodus_file;
 class model;
@@ -206,6 +208,7 @@ public:
   void dump        (exodus_file &);
   void extract     (model &);
   void interpolate (model &);
+  void interpolateTopography (discontinuity &topo);
 
 protected:
   
@@ -223,7 +226,7 @@ protected:
   std::vector<double> c11, c12, c13, c14, c15, c16;
   std::vector<double> c22, c23, c24, c25, c26, c33;
   std::vector<double> c34, c35, c36, c44, c45, c46;
-  std::vector<double> c55, c56, c66;
+  std::vector<double> c55, c56, c66, elv;
   
   // Density
   std::vector<double> rho;
@@ -387,4 +390,18 @@ public:
   void prem_no220               (double &, double &, double &, double &);
   void eumod_vpPrem_vsPremLt670 (double &, double &, double &, double &);
           
+};
+
+class discontinuity {
+
+public:
+  
+  discontinuity ();
+  
+  std::vector<double> elv;  
+  std::vector<int> KDdat;  
+  kdtree *tree;
+  
+  void readTopography ();
+
 };

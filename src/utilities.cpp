@@ -36,6 +36,22 @@ std::vector<string> getRequiredChunks (model &mod) {
   
   std::vector<std::string> modelChunks;
   
+  if (mod.direction == "interpolate_topography") {
+    
+    mod.colChunks.clear (); mod.lonChunks.clear (); mod.rMin.clear ();
+    
+    mod.colChunks.insert ("col000-090.");
+    mod.colChunks.insert ("col090-180.");
+    
+    mod.lonChunks.insert ("lon000-090.");
+    mod.lonChunks.insert ("lon090-180.");
+    mod.lonChunks.insert ("lon180-270.");
+    mod.lonChunks.insert ("lon270-360.");
+    
+    mod.rMin.push_back (R_EARTH-100.);
+    
+  }
+  
   DIR *dp = opendir (mod.meshDirectory.c_str ());
   struct dirent *dirp;
   if (dp == NULL)

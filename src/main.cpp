@@ -7,6 +7,8 @@ int main () {
   ses3d modType;
   model *mod =& modType;
   
+  discontinuity topo;
+  
   std::vector<std::string> fileNames;
   std::vector<std::string>::iterator fileNameIter;
   
@@ -19,11 +21,20 @@ int main () {
     mesh msh (exo);
     
     if (mod->direction == "interpolate") {
+      
       msh.interpolate (*mod);
       msh.dump (exo);      
+      
     } else if (mod->direction == "extract") {
+      
       msh.extract (*mod);
-    }        
+      
+    } else if (mod->direction == "interpolate_topography") {
+      
+      msh.interpolateTopography (topo);
+      msh.dump (exo);
+      
+    }
   }
   
   if (mod->direction == "extract")

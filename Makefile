@@ -12,6 +12,7 @@ OBJECTS		= \
 	./obj/mesh.o \
 	./obj/utilities.o \
 	./obj/background_models.o \
+	./obj/topography.o \
 	./obj/attenuation.o
 	
 ./obj/%.o: ./src/%.cpp
