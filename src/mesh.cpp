@@ -31,6 +31,7 @@ mesh::mesh (exodus_file &eFile) {
   c66              = eFile.getVariable ("c66");  
   rho              = eFile.getVariable ("rho");    
   elv              = eFile.getVariable ("elv");
+  du1              = eFile.getVariable ("du1");
   
   connectivity     = eFile.returnConnectivity ();
   nodeNumMap       = eFile.returnNodeNumMap   ();
@@ -459,23 +460,82 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
 
 void mesh::interpolateTopography (discontinuity &topo) {
     
-  size_t setSize = x.size ();
-  
   intensivePrint ("Interpolating topography.");
-  
+
+  // Number of nodes in mesh chunk.
+  size_t setSize = x.size ();    
 #pragma omp parallel for
-  for (size_t i=0; i< setSize; i++) {
+  for (size_t i=0; i<setSize; i++) {
       
     double col, lon, rad;            
     int nodeNum = i;
 
+    // Get spherical co-ordinates for interpolation.
     xyz2ColLonRad (x[nodeNum], y[nodeNum], z[nodeNum], col, lon, rad);
-    kdres *set = kd_nearest3 (topo.tree, rad2Deg (col), rad2Deg (lon), R_EARTH);
-    void *ind  = kd_res_item_data (set);
-    int point  = * (int *) ind;
-    kd_res_free (set); 
     
-    elv[i] = topo.elv[point];    
+    // Pull out both the topography and the crust parameters.
+    kdres *setTop = kd_nearest3 (topo.elvTree,   rad2Deg (col), rad2Deg (lon), R_EARTH);        
+    kdres *setCst = kd_nearest3 (topo.crustTree, rad2Deg (col), rad2Deg (lon), R_EARTH);        
+    
+    void *indTop  = kd_res_item_data (setTop);
+    void *indCst  = kd_res_item_data (setCst);
+    
+    int pointTop  = * (int *) indTop;
+    int pointCst  = * (int *) indCst;
+    
+    kd_res_free (setTop); 
+    kd_res_free (setCst); 
+    
+    // Convert elevation to kilometers.
+    elv[i] = topo.elv[pointTop] / 1000.;    
+
+    /* The moho is defined in a weird way ( depth from sea level if in the 
+    ocean, and depth from elevation if in the crust). First, convert crust 
+    elevation to km, and then decided whether we're taking the sea level or
+    or crustial surface as reference */    
+    double referenceHeight;    
+    if (elv[i] <= 0) {
+      referenceHeight = R_EARTH;      
+    } else {
+      referenceHeight = R_EARTH + elv[i];
+    }    
+    double radMoho = referenceHeight - topo.dpCrust[pointCst];
+    
+    // If we're in crust, interpolate.
+    if (rad > radMoho) {
+
+      background_models backgroundMod;
+      
+      double vs1d, vp1d, rho1d;
+      backgroundMod.prem_no220 (rad, vs1d, vp1d, rho1d);  
+      
+      double crustVsh = topo.vsCrust[pointCst];
+      double crustVsv = topo.vsCrust[pointCst] - aniCorrection;    
+      double crustRho = 0.2277 * crustVsh + 2.016;
+      double crustVp  = 1.5399 * crustVsh + 0.840;
+
+      double N = crustRho * crustVsh*crustVsh;
+      double L = crustRho * crustVsv*crustVsv;
+      double A = crustRho * crustVp*crustVp;
+      double C = crustRho * crustVp*crustVp;
+      double S = A - 2 * N;
+      double F = A - 2 * L;
+          
+      c11[nodeNum] = C;
+      c12[nodeNum] = F;
+      c13[nodeNum] = F;
+      c22[nodeNum] = A;
+      c23[nodeNum] = S;
+      c33[nodeNum] = A;
+      c44[nodeNum] = N;
+      c55[nodeNum] = L;
+      c66[nodeNum] = L;
+      rho[nodeNum] = crustRho;
+      
+      // Set the crust region flag.
+      du1[nodeNum] = 1;
+      
+    }
     
   }
     
@@ -570,6 +630,7 @@ void mesh::dump (exodus_file &eFile) {
   eFile.writeVariable (c66, "c66");
   eFile.writeVariable (rho, "rho");
   eFile.writeVariable (elv, "elv");
+  eFile.writeVariable (du1, "du1");
   
 }
 

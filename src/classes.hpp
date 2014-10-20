@@ -70,14 +70,16 @@ std::vector<double> returnVector      (double &x, double &y, double &z);
 std::vector<string> getRequiredChunks (model &mod);    
 
 // ###### global variables ######
-const double R_EARTH = 6371.0;
-const double CLOSE   = 1;
-const double TINY    = 0.01;
-const double BIGTINY = 0.1;
-const double RAD_400 = 5971.0;
-const double RAD_670 = 5701.0;
-const double RAD_CMB = 3480.0;
-const double RAD_ICB = 1221.0;
+const double R_EARTH       = 6371.0;
+const double CLOSE         = 1;
+const double TINY          = 0.01;
+const double BIGTINY       = 0.1;
+const double RAD_400       = 5971.0;
+const double RAD_670       = 5701.0;
+const double RAD_CMB       = 3480.0;
+const double RAD_ICB       = 1221.0;
+const double aniCorrection = 0.188078;
+
 
 class model {
   
@@ -208,7 +210,7 @@ public:
   void dump        (exodus_file &);
   void extract     (model &);
   void interpolate (model &);
-  void interpolateTopography (discontinuity &topo);
+  void interpolateTopography (discontinuity &topokate );
 
 protected:
   
@@ -226,7 +228,7 @@ protected:
   std::vector<double> c11, c12, c13, c14, c15, c16;
   std::vector<double> c22, c23, c24, c25, c26, c33;
   std::vector<double> c34, c35, c36, c44, c45, c46;
-  std::vector<double> c55, c56, c66, elv;
+  std::vector<double> c55, c56, c66, elv, du1, du2;
   
   // Density
   std::vector<double> rho;
@@ -398,10 +400,18 @@ public:
   
   discontinuity ();
   
+  std::vector<double> xCrust, yCrust, vsCrust, dpCrust;
+  
   std::vector<double> elv;  
-  std::vector<int> KDdat;  
-  kdtree *tree;
+  std::vector<int> KDdat, crustDat;  
+  kdtree *elvTree, *crustTree;
+  
+  
+  kdtree *createKDTree (std::vector<double> &x, std::vector<double> &y, 
+                       std::vector<int> &dat);
   
   void readTopography ();
+  void readCrust      ();
+  void readCrustFile  (std::vector<double> &vec, std::string fName);
 
 };

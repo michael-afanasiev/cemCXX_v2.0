@@ -39,6 +39,7 @@
 *10MinuteTopoGrid*
 
 # Param files
+mod/data
 mod/parameters.txt
 mod/CEM
 Makefile
