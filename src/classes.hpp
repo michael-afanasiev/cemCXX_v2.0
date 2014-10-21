@@ -120,6 +120,9 @@ protected:
   vector<vector<double>> vsv, vsh, vpv, vph;    
   vector<vector<double>> vsi, vpi;  
   
+  // optional smoother array.
+  vector<vector<double>> smooth;
+  
   // KD-trees.
   std::vector<kdtree*> trees;  
   std::vector<std::vector<int>> datKD;
@@ -160,6 +163,7 @@ public:
   std::vector<double> rMax, rMin;  
   std::string meshDirectory;
   std::string direction;    
+  std::string taper;
 
 };
 
@@ -260,7 +264,7 @@ protected:
   elasticTensor breakdown     (model &mod, double &x, double &y, double &z, 
                                size_t &region, size_t &mshInd, int &point);                                
   double returnUpdateAbsolute (vector<vector<double>> &vec, double &valMsh, 
-                               size_t &reg, int &pnt);
+                               size_t &reg, int &pnt, vector<vector<double>> &smooth);
   double returnUpdate1d       (vector<vector<double>> &vec, double &valMsh, 
                                size_t &reg, int &pnt, double &val1d);
   double returnUpdate         (vector<vector<double>> &vec, double &valMsh, 

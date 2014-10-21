@@ -7,8 +7,6 @@ int main () {
   ses3d modType;
   model *mod =& modType;
   
-  discontinuity topo;
-  
   std::vector<std::string> fileNames;
   std::vector<std::string>::iterator fileNameIter;
   
@@ -16,23 +14,23 @@ int main () {
     
   for (fileNameIter=fileNames.begin (); fileNameIter!=fileNames.end(); ++fileNameIter) {
     
-    exodus_file exo (*fileNameIter, mod->regionNames);  
-  
-    mesh msh (exo);
+    exodus_file exo (*fileNameIter, mod->regionNames);    
+    mesh msh        (exo);
     
     if (mod->direction == "interpolate") {
       
       msh.interpolate (*mod);
-      msh.dump (exo);      
+      msh.dump         (exo);      
       
     } else if (mod->direction == "extract") {
       
       msh.extract (*mod);
       
     } else if (mod->direction == "interpolate_topography") {
-      
+
+      discontinuity topo;
       msh.interpolateTopography (topo);
-      msh.dump (exo);
+      msh.dump                   (exo);
       
     }
   }

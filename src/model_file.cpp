@@ -41,6 +41,9 @@ void model::readParameterFile () {
     if (paramName[i] == "interpolating_region")
       regionNames.push_back (paramValue[i]);
     
+    if (paramName[i] == "taper")
+      taper = paramValue[i];
+    
   }  
   
 }

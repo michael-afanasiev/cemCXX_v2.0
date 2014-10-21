@@ -77,6 +77,13 @@ void ses3d::read () {
     
     }  
   }
+  
+  if (myRank == 0 && taper == "true") {
+    
+    readFile (smooth, "smoother");
+    
+  }
+  
 }
 
 void ses3d::convert2Radians () {
@@ -121,6 +128,7 @@ void ses3d::broadcast () {
   broadcast2DVector (vph);
   broadcast2DVector (vsv);
   broadcast2DVector (vsh);
+  broadcast2DVector (smooth);
           
 }
 
@@ -148,6 +156,8 @@ void ses3d::readFile (vector<vector<double>> &vec, string type) {
     fileName = path + "/dVSV";
   if (type == "vsh")
     fileName = path + "/dVSH";
+  if (type == "smoother")
+    fileName = path + "/smoother";
   
   std::ifstream file (fileName);
     

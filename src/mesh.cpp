@@ -575,13 +575,17 @@ double mesh::SBTRKTUpdate (vector<vector<double>> &vec, double &valMsh,
 }
 
 double mesh::returnUpdateAbsolute (vector<vector<double>> &vec, double &valMsh, 
-                                   size_t &reg, int &ind) {
+                                   size_t &reg, int &ind, vector<vector<double>> &smooth) {
   
   // Small function that checks for the existance of a vector, and returns its value at [reg][pnt].
   // If it does not exist, it returns the default (in this case valmsh).
   
   if (not vec.empty ()) {
-    return vec[reg][ind];
+    if (not smooth.empty ()) {
+      return vec[reg][ind] * smooth[reg][ind] + valMsh * (1 - smooth[reg][ind]);
+    } else {
+      return vec[reg][ind];
+    }
   } else {
     return valMsh;
   }
@@ -685,11 +689,11 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
     if (mod.interpolationType == "add_absolute_velocities") {
       
       // get updated parameters.      
-      rhoNew = returnUpdateAbsolute (mod.rho, rhoMsh, region, pnt);
-      vsvNew = returnUpdateAbsolute (mod.vsv, vsvMsh, region, pnt);
-      vshNew = returnUpdateAbsolute (mod.vsh, vshMsh, region, pnt);
-      vpvNew = returnUpdateAbsolute (mod.vpv, vpvMsh, region, pnt);
-      vphNew = returnUpdateAbsolute (mod.vph, vphMsh, region, pnt);
+      rhoNew = returnUpdateAbsolute (mod.rho, rhoMsh, region, pnt, mod.smooth);
+      vsvNew = returnUpdateAbsolute (mod.vsv, vsvMsh, region, pnt, mod.smooth);
+      vshNew = returnUpdateAbsolute (mod.vsh, vshMsh, region, pnt, mod.smooth);
+      vpvNew = returnUpdateAbsolute (mod.vpv, vpvMsh, region, pnt, mod.smooth);
+      vphNew = returnUpdateAbsolute (mod.vph, vphMsh, region, pnt, mod.smooth);
       
     }
     
