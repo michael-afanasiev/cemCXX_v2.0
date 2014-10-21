@@ -54,6 +54,9 @@ kdtree *discontinuity::createKDTree (std::vector<double> &x, std::vector<double>
   int k = 0;
   for (size_t i=0; i<x.size (); i++) {
     for (size_t j=0; j<y.size (); j++) {
+
+      if (y[j] > 180.)
+        y[j] = y[j] - 360.;
           
       kdVec[k] = k;
       kd_insert3 (tree, x[i], y[j], R_EARTH, &kdVec[k]);    
