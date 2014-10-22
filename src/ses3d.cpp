@@ -70,6 +70,10 @@ void ses3d::read () {
       readFile (vph, "vpi");
       readFile (vsv, "vsv");
       readFile (vsh, "vsh");
+
+    } else if (symSys == "tti_just_vsh") {
+
+      readFile (vsh, "vsh");
   
     } else {
     

@@ -32,6 +32,7 @@ mesh::mesh (exodus_file &eFile) {
   rho              = eFile.getVariable ("rho");    
   elv              = eFile.getVariable ("elv");
   du1              = eFile.getVariable ("du1");
+  du2              = eFile.getVariable ("du2");
   
   connectivity     = eFile.returnConnectivity ();
   nodeNumMap       = eFile.returnNodeNumMap   ();
@@ -56,19 +57,22 @@ void mesh::interpolate (model &mod) {
 #pragma omp parallel for firstprivate (pCount, pIter)
 
   for (size_t i=0; i<setSize; i++) {
-         
+
     // extract node number.
     size_t nodeNum = interpolatingSet[i] - 1;        
-    
+   
+    // use du2 as a scratch array to avoid doubly visiting points.
+    if (du2[nodeNum] == 1)
+      continue;
+         
     // find closest point [region specific].
     for (size_t r=0; r<mod.numModelRegions; r++) {
 
       bool inRegion = checkInterpolatingRegion (x[nodeNum], y[nodeNum], z[nodeNum], 
                                                 mod.minRadRegion[r], mod.maxRadRegion[r]);
                                                 
-                                                
       if (inRegion) {
-        
+      
         kdres *set = kd_nearest3 (mod.trees[r], x[nodeNum], y[nodeNum], z[nodeNum]);
         void *ind  = kd_res_item_data (set);
         int point  = * (int *) ind;
@@ -99,6 +103,9 @@ void mesh::interpolate (model &mod) {
         c56[nodeNum] = moduli.c56;
         c66[nodeNum] = moduli.c66;
         rho[nodeNum] = moduli.rho;
+
+        // mark that we've visited here.
+        du2[nodeNum] = 1;
         
       }
       
@@ -550,7 +557,7 @@ double mesh::returnUpdate (vector<vector<double>> &vec, double &valMsh,
   // in addition to additing the value to vslMsh. If the vector does not exist, it just returns 
   // valMsh. This is the workhorse function tti model updates.
   //
-                             
+  
   if (not vec.empty ()) {
     return vec[reg][ind] + valMsh;
   } else {
@@ -707,7 +714,7 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
       vphNew = SBTRKTUpdate (mod.vph, vphMsh, region, pnt);
       
     }
-    
+   
     if (mod.interpolationType == "add_to_cem") {
       
       // get updated parameters.      
