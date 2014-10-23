@@ -84,6 +84,7 @@ const double aniCorrection = 0.188078;
 class model {
   
   friend class mesh;
+  friend class kernel;
 
 protected:
   
@@ -111,7 +112,7 @@ protected:
   std::vector<std::vector<double>> c11, c12, c13, c14, c15, c16;
   std::vector<std::vector<double>> c22, c23, c24, c25, c26, c33;
   std::vector<std::vector<double>> c34, c35, c36, c44, c45, c46;
-  std::vector<std::vector<double>> c55, c56, c66;
+  std::vector<std::vector<double>> c55, c56, c66, eta;
   
   // density.
   vector<vector<double>> rho;
@@ -164,6 +165,22 @@ public:
   std::string meshDirectory;
   std::string direction;    
   std::string taper;
+
+};
+
+class specfem3d_globe: public model {
+
+public:
+  
+  specfem3d_globe ();
+  
+  void read  (void);
+  void write (void) {};
+  
+protected:
+  
+  void readCoordNetcdf ();
+  vector<vector<double>> readParamNetcdf (string fName);
 
 };
 
@@ -282,6 +299,38 @@ protected:
   
 };
 
+
+class kernel {
+  
+  friend class exodus_file;
+  friend class model;
+  
+private:
+  
+  int myRank;
+  int worldSize;
+  
+  // co-ordinates.
+  std::vector<double> x, y, z;
+  
+  std::vector<int> nodeNumMap, connectivity, interpolatingSet;
+  int numNodes;
+  
+  // counter.
+  std::vector<double> du1;
+  
+  // parameter.
+  std::vector<double> value;
+  
+public:
+  
+  kernel (exodus_file &);  
+  void interpolate (model &mod);
+  void write (exodus_file &eFile);
+
+};
+
+
 class elasticTensor {
 
 public:
@@ -296,6 +345,7 @@ public:
 class exodus_file {
   
   friend class mesh;
+  friend class kernel;
   
 protected:
   
@@ -359,15 +409,15 @@ protected:
   std::vector<double> getVariable            (std::string varName);
 
   std::string returnName ();
-  
-
-      
+        
 public:
   
   // Constructor.
   exodus_file   (std::string, std::vector<std::string>);
   ~exodus_file  ();
   
+  void putVarParams     ();
+  void putVarNames ();
   void printMeshInfo  ();
   
 };

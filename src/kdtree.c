@@ -261,7 +261,6 @@ static int find_nearest(struct kdnode *node, const double *pos, double range, st
 
 	if(!node) return 0;
 
-  // printf ("%f %f\n", range, node->pos[i]);
 	dist_sq = 0;
 	for(i=0; i<dim; i++) {
 		dist_sq += SQ(node->pos[i] - pos[i]);
@@ -430,6 +429,7 @@ struct kdres *kd_nearest(struct kdtree *kd, const double *pos)
 	dist_sq = 0;
 	for (i = 0; i < kd->dim; i++)
 		dist_sq += SQ(result->pos[i] - pos[i]);
+
 	/* Search for the nearest neighbour recursively */
 	kd_nearest_i(kd->root, pos, &result, &dist_sq, rect);
 
@@ -640,9 +640,7 @@ void *kd_res_item(struct kdres *rset, double *pos)
 			memcpy(pos, rset->riter->item->pos, rset->tree->dim * sizeof *pos);
 		}
 		return rset->riter->item->data;
-    printf ( "HIHERE" );
 	}
-  printf ( "HITHERE" );
 	return 0;
 }
 

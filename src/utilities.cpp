@@ -185,6 +185,8 @@ void xyz2ColLonRad (double &x, double &y, double &z, double &col, double &lon, d
 
 }
 
+
+
 void colLonRad2xyz (double &x, double &y, double &z, double &col, double &lon, double &rad) {
   
   x = rad * cos (lon) * sin (col);

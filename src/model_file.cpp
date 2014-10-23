@@ -123,7 +123,7 @@ void model::createKDtree () {
     for (size_t i=0; i<numParams; i++) {
       
       datKD[r][i] = i;
-      kd_insert3 (tree, x[r][i], y[r][i], z[r][i], &datKD[r][i]);      
+      kd_insert3 (tree, x[r][i], y[r][i], z[r][i], &datKD[r][i]);    
       
     }
     

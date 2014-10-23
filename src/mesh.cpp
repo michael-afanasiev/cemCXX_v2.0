@@ -55,7 +55,6 @@ void mesh::interpolate (model &mod) {
   int pIter  = 0;
   
 #pragma omp parallel for firstprivate (pCount, pIter)
-
   for (size_t i=0; i<setSize; i++) {
 
     // extract node number.

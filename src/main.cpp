@@ -4,7 +4,7 @@ int main () {
   
   MPI::Init ();
 
-  ses3d modType;
+  specfem3d_globe modType;
   model *mod =& modType;
   
   std::vector<std::string> fileNames;

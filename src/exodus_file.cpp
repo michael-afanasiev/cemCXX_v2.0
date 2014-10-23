@@ -18,6 +18,7 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
   getElemNumMap   (); 
   getConnectivity (regionNames);
   getNodeSets     (regionNames);
+  
   // getSideSets     ();
   
   printMeshInfo ();
@@ -47,6 +48,21 @@ void exodus_file::openFile () {
   }
     
 }
+
+void exodus_file::putVarParams () {
+  
+  exodusCheck (ex_put_var_param (idexo, "n", 1), "ex_put_var_param");
+  
+}
+
+void exodus_file::putVarNames () {
+  
+  char *varNames[1];
+  varNames[0] = "krn";
+  exodusCheck (ex_put_var_names (idexo, "n", 1, varNames), "ex_put_var_names");
+  
+}
+
 
 void exodus_file::getSideSets () {
 
@@ -256,6 +272,12 @@ std::vector<int> exodus_file::returnSideSetElem () {
 
 void exodus_file::getNodeSets (std::vector<std::string> regionNames) {
   
+  // Don't bother if there are no nodesets.
+  if (numNodeSets == 0) {
+    interpolatingSet = nodeNumMap;
+    return;    
+  }
+  
   // Reserve space for the array of nodeset names.
   char *nameDum[numNodeSets];
   for (size_t i=0; i<numNodeSets; i++) {
@@ -274,7 +296,8 @@ void exodus_file::getNodeSets (std::vector<std::string> regionNames) {
   vector<int>::iterator  next=interpolatingSet.begin();
   for (size_t i=0; i<numNodeSets; i++) {
     
-    if (std::find (regionNames.begin (), regionNames.end (), nameDum[i]) == regionNames.end ())
+    if (std::find (regionNames.begin (), regionNames.end (), nameDum[i]) == regionNames.end () &&
+       regionNames[0] != "all")
       continue;
       
     int numNodeThisSet = getNumNodeInSet (nodeSetNumMap[i]);    
@@ -298,8 +321,8 @@ void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
   // connectivity array.
   
   // Reserve space for the array of block names.
-  char *nameDum[numNodeSets];
-  for (size_t i=0; i<numNodeSets; i++) {
+  char *nameDum[numElemBlock];
+  for (size_t i=0; i<numElemBlock; i++) {
     nameDum[i] = new char [MAX_LINE_LENGTH+1];
   }  
   
@@ -314,7 +337,8 @@ void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
   vector<int>::iterator  next=connectivity.begin();
   for (size_t i=0; i<numElemBlock; i++) {
 
-    if (std::find (regionNames.begin (), regionNames.end (), nameDum[i]) == regionNames.end ())
+    if (std::find (regionNames.begin (), regionNames.end (), nameDum[i]) == regionNames.end () &&
+      regionNames[0] != "all")
       continue;
 
     // Initialze scratch array to pull from exodus file.
@@ -451,7 +475,7 @@ void exodus_file::exodusCheck (int ier, std::string function) {
   if (ier != 0) {
     std::cout << red << "Exodus library error in " << function << rst << std::flush 
       << std::endl;
-    exit (EXIT_FAILURE);
+    // exit (EXIT_FAILURE);
   }
   
 }
