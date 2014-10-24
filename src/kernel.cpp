@@ -20,14 +20,21 @@ kernel::kernel (exodus_file &eFile) {
 }
 
 void kernel::interpolate (model &mod) {
-  
+    
   intensivePrint ("Interpolating.");
   size_t setSize = interpolatingSet.size ();
-  int percent = (setSize / omp_get_max_threads ()) / 100.;
-    
-  int pCount = 0;
-  int pIter  = 0;
+  int percent = (setSize) / 100.;
   
+  struct {
+    double distance;
+    int    rank;
+  } distanceIn[numNodes], distanceOut[numNodes];
+    
+  int pCount       = 0;
+  int pIter        = 0;  
+  double searchRad = 100;  
+  double *bufValue = new double [setSize];
+  double *interpParam = new double [setSize];
   for (size_t i=0; i<setSize; i++) {
 
     // extract node number.
@@ -44,19 +51,24 @@ void kernel::interpolate (model &mod) {
       void *ind  = kd_res_item_data (set);
       int point  = * (int *) ind;
       kd_res_free (set); 
-
+    
       // get distance.
       double xDist = x[nodeNum] - mod.x[r][point];
       double yDist = y[nodeNum] - mod.y[r][point];
       double zDist = z[nodeNum] - mod.z[r][point];      
       double dist  = getRadius (xDist, yDist, zDist);
 
-      // save distance.
-      value[nodeNum] = dist;        
+      // cout << nodeNum << ' ' << setSize << endl;
+      // Save distance and rank in struct.
+      distanceIn[nodeNum].distance = dist;
+      distanceIn[nodeNum].rank     = myRank;
       
+      // save param.
+      interpParam[nodeNum] = mod.vsh[r][point];
+
       // mark that we've visited here.
       du1[nodeNum] = 1;
-      
+                  
     }
     
     if (omp_get_thread_num () == 0) {
@@ -71,11 +83,32 @@ void kernel::interpolate (model &mod) {
   
   cout << grn << "Done." << rst << endl;
   
+  // Figure out where the minimum distance is.
+  MPI::COMM_WORLD.Allreduce (distanceIn, distanceOut, setSize, MPI_DOUBLE_INT, MPI_MINLOC);  
+  
+  for (size_t i=0; i<setSize; i++) {
+    
+    bufValue[i] = 0.;
+    if (distanceOut[i].rank == myRank)      
+      bufValue[i] = interpParam[i];              
+    
+  }
+  
+  if (myRank == 0) {
+    MPI::COMM_WORLD.Reduce (MPI_IN_PLACE, bufValue, setSize, MPI_DOUBLE, MPI_SUM, 0);
+  } else {
+    MPI::COMM_WORLD.Reduce (bufValue,     bufValue, setSize, MPI_DOUBLE, MPI_SUM, 0);
+  }
+  
+  std::copy (bufValue, bufValue+setSize, value.begin ());
+  
+  
 }
 
 void kernel::write (exodus_file &eFile) {
   
-  eFile.writeVariable (value, "krn");
+  if (myRank == 0)
+    eFile.writeVariable (value, "krn");
   
   
 }
