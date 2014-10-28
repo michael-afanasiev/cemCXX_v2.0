@@ -217,7 +217,7 @@ void mesh::interpolateAndSmooth (model &mod) {
         double zDist = z[nodeNum] - mod.z[r][point];      
         double dist  = getRadius (xDist, yDist, zDist);
 
-        // save d
+        // save minimum distance.
         if (dist < minDist) {
           distanceIn[nodeNum].distance = dist;
           distanceIn[nodeNum].rank     = myRank;
@@ -369,7 +369,6 @@ void mesh::extract (model &mod) {
   double searchRadius      = 1.;
   const double ONE_PERCENT = 0.01;
   const double TEN_PERCENT = 0.10;
-  size_t sizeConnect       = connectivity.size ();  
   int totalLoops           = 0;
   
   // Loop over model regions.  
@@ -393,12 +392,10 @@ void mesh::extract (model &mod) {
       double zTarget = mod.z[r][i];
         
       // Check if we're within the (coarse) mesh bounds.
-      // if (checkBoundingBox (xTarget, yTarget, zTarget)) {
+      if (checkBoundingBox (xTarget, yTarget, zTarget) || mod.interpolationType == "kernel") {
 
         // Assume we haven't found the enclosing tet, and begin searching.
         bool found = false;
-        // if (myRank == 0)
-        // cout << "Took " << (float) t / CLOCKS_PER_SEC << " seconds on proc. " << myRank << endl;
   
         while (not found) {
           
@@ -420,9 +417,6 @@ void mesh::extract (model &mod) {
             // Get the current index from the kd-tree.
             void *ind = kd_res_item_data (set);
             int point = * (int *) ind;
-          
-            // Loop over the entire connectivity array.
-            clock_t t = clock ();          
             
             // size of the attached element array/
             size_t listSize = connectivityList[point].size ();
@@ -438,104 +432,69 @@ void mesh::extract (model &mod) {
               n1 = connectivity[i1] - 1;
               n2 = connectivity[i2] - 1;
               n3 = connectivity[i3] - 1;
-          
-              // If the entry in connectivity array matches the index of the point we need 
-              // (remember: all indices are node numbers - 1, due to node numbering starting at
-              // one and c arrays starting at zero), figure out which element belongs to the point.
-              // The else ifs here take care of the striding in the connectivity array.
-              // if ((connectivity[e] - 1) == point) {
-              //
-              //   if        (e % numNodePerElem == 0) {
-              //     i0 = e+0; i1 = e+1;
-              //     i2 = e+2; i3 = e+3;
-              //   } else if (e % numNodePerElem == 1) {
-              //     i0 = e-1; i1 = e+0;
-              //     i2 = e+1; i3 = e+2;
-              //   } else if (e % numNodePerElem == 2) {
-              //     i0 = e-2; i1 = e-1;
-              //     i2 = e+0; i3 = e+1;
-              //   } else if (e % numNodePerElem == 3) {
-              //     i0 = e-3; i1 = e-2;
-              //     i2 = e-1; i3 = e+0;
-              //   }
-              //
-              //   // Again, the actual node indices are the node numbers - 1.
-              //   n0 = connectivity[i0]-1;
-              //   n1 = connectivity[i1]-1;
-              //   n2 = connectivity[i2]-1;
-              //   n3 = connectivity[i3]-1;
-              
-//               if (myRank == 0) {
-//                 cout << n0 << ' ' << n1 << ' ' << n2 << ' ' << n3 << ' ' << sizeConnect << endl;
-//                 cout << i0 << ' ' << i1 << ' ' << i2 << ' ' << i3 << ' ' << sizeConnect << endl;
-// }
+    
                                                 
-                // Set up our four vectors which define the edge of the tet.
-                std::vector<double> v0 = returnVector (x[n0], y[n0], z[n0]);
-                std::vector<double> v1 = returnVector (x[n1], y[n1], z[n1]);
-                std::vector<double> v2 = returnVector (x[n2], y[n2], z[n2]);
-                std::vector<double> v3 = returnVector (x[n3], y[n3], z[n3]);
-                  
-                // If we're on a side set, check and project to the actual mesh if necessary.
-                if (onSideSet[i0] && onSideSet[i1] && onSideSet[i3]) {
-                  checkAndProject (v0, v1, v3, p0);
-                } else if (onSideSet[i1] && onSideSet[i2] && onSideSet[i3]) {
-                  checkAndProject (v1, v2, v3, p0);
-                } else if (onSideSet[i0] && onSideSet[i2] && onSideSet[i3]) {
-                  checkAndProject (v0, v2, v3, p0);
-                } else if (onSideSet[i0] && onSideSet[i1] && onSideSet[i2]) {
-                  checkAndProject (v0, v1, v2, p0);
-                }
-                  
-                // Do the barycentric transform to test interpolation condition.
-                double l0, l1, l2, l3;
-                found = testInsideTet (v0, v1, v2, v3, p0, l0, l1, l2, l3);
-                if (found == true) {
-
-                  if (mod.interpolationType != "kernel") {
-                    
-                    mod.c11[r][i] = interpolateTet (c11, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c12[r][i] = interpolateTet (c12, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c13[r][i] = interpolateTet (c13, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c14[r][i] = interpolateTet (c14, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c15[r][i] = interpolateTet (c15, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c16[r][i] = interpolateTet (c16, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c22[r][i] = interpolateTet (c22, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c23[r][i] = interpolateTet (c23, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c24[r][i] = interpolateTet (c24, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c25[r][i] = interpolateTet (c25, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c26[r][i] = interpolateTet (c26, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c33[r][i] = interpolateTet (c33, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c34[r][i] = interpolateTet (c34, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c35[r][i] = interpolateTet (c35, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c36[r][i] = interpolateTet (c36, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c44[r][i] = interpolateTet (c44, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c45[r][i] = interpolateTet (c45, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c46[r][i] = interpolateTet (c46, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c55[r][i] = interpolateTet (c55, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
-                    
-                  } else if (mod.interpolationType == "kernel") {
-                    
-                    mod.krn[r][i] = interpolateTet (krn, n0, n1, n2, n3, l0, l1, l2, l3);
-                    
-                  }
-
-                  // Keep the search radius tight, and break out of loop.
-                  searchRadius = searchRadius - searchRadius * ONE_PERCENT;
-                  
-                  break;               
+              // Set up our four vectors which define the edge of the tet.
+              std::vector<double> v0 = returnVector (x[n0], y[n0], z[n0]);
+              std::vector<double> v1 = returnVector (x[n1], y[n1], z[n1]);
+              std::vector<double> v2 = returnVector (x[n2], y[n2], z[n2]);
+              std::vector<double> v3 = returnVector (x[n3], y[n3], z[n3]);
                 
-                }            
-              // }
+              // If we're on a side set, check and project to the actual mesh if necessary.
+              if (onSideSet[i0] && onSideSet[i1] && onSideSet[i3]) {
+                checkAndProject (v0, v1, v3, p0);
+              } else if (onSideSet[i1] && onSideSet[i2] && onSideSet[i3]) {
+                checkAndProject (v1, v2, v3, p0);
+              } else if (onSideSet[i0] && onSideSet[i2] && onSideSet[i3]) {
+                checkAndProject (v0, v2, v3, p0);
+              } else if (onSideSet[i0] && onSideSet[i1] && onSideSet[i2]) {
+                checkAndProject (v0, v1, v2, p0);
+              }
+                
+              // Do the barycentric transform to test interpolation condition.
+              double l0, l1, l2, l3;
+              found = testInsideTet (v0, v1, v2, v3, p0, l0, l1, l2, l3);
+              if (found == true) {
+
+                if (mod.interpolationType != "kernel") {
+                  
+                  mod.c11[r][i] = interpolateTet (c11, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c12[r][i] = interpolateTet (c12, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c13[r][i] = interpolateTet (c13, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c14[r][i] = interpolateTet (c14, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c15[r][i] = interpolateTet (c15, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c16[r][i] = interpolateTet (c16, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c22[r][i] = interpolateTet (c22, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c23[r][i] = interpolateTet (c23, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c24[r][i] = interpolateTet (c24, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c25[r][i] = interpolateTet (c25, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c26[r][i] = interpolateTet (c26, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c33[r][i] = interpolateTet (c33, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c34[r][i] = interpolateTet (c34, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c35[r][i] = interpolateTet (c35, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c36[r][i] = interpolateTet (c36, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c44[r][i] = interpolateTet (c44, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c45[r][i] = interpolateTet (c45, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c46[r][i] = interpolateTet (c46, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c55[r][i] = interpolateTet (c55, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
+                  
+                } else if (mod.interpolationType == "kernel") {
+                  
+                  mod.krn[r][i] = interpolateTet (krn, n0, n1, n2, n3, l0, l1, l2, l3);
+                  
+                }
+
+                // Keep the search radius tight, and break out of loop.
+                searchRadius = searchRadius - searchRadius * ONE_PERCENT;
+                
+                break;               
+              
+              }            
             }   
-            t = clock () - t;
-            // if (myRank == 0)
-            // cout << "Took " << (float) t / CLOCKS_PER_SEC << " seconds TO FINISH on proc. " << myRank << endl;
-                 
-      
+                       
             // Advance the result set if we haven't yet found our man.
             kd_res_next (set);
         
@@ -552,9 +511,6 @@ void mesh::extract (model &mod) {
             xyz2ColLonRad (xTarget, yTarget, zTarget, col, lon, rad);
             cout << rad2Deg(col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
             cout << myRank << endl;
-            // mod.krn[r][i] = 0.;
-            // found = true;
-            // searchRadius = 1.;
           }
 
           // If we actually have a results set, let's free the memory needed for the next pass.
@@ -562,10 +518,8 @@ void mesh::extract (model &mod) {
             kd_res_free (set);
           
         }                        
-      // }
+      }
       
-      
-        // cout << i << ' ' << myRank << endl;
       // Percent reporting TODO move this to a function.      
 #pragma omp critical
       {
@@ -574,11 +528,8 @@ void mesh::extract (model &mod) {
           cout << pIter << " %\r" << flush;
           pIter++;
         }
-      }
-      
-            
-    }
-        
+      }                  
+    }        
   }
   
   cout << grn << "Done." << rst << endl;
@@ -648,14 +599,12 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
     p0[1] = p0[1] + (n0[1]) * (dif + TINY);
     p0[2] = p0[2] + (n0[2]) * (dif + TINY);
 
-  } else if ((pRadius < dist) && (pRadius < radMin)) { // (abs (pRadius-radMin) < CLOSE)) {
+  } else if ((pRadius < dist) &&  (abs (pRadius-radMin) < CLOSE)) {
 
     double dif = abs (radMin - dist);
-    cout << getRadius (p0[0], p0[1], p0[2]) << ' ' << myRank << endl;
     p0[0] = p0[0] + n0[0] * (dif + TINY) * (-1);
     p0[1] = p0[1] + n0[1] * (dif + TINY) * (-1);
     p0[2] = p0[2] + n0[2] * (dif + TINY) * (-1);
-    cout << getRadius (p0[0], p0[1], p0[2]) << ' ' << dif << ' ' << myRank << endl;
     
   }
            
@@ -738,8 +687,7 @@ void mesh::interpolateTopography (discontinuity &topo) {
       // Set the crust region flag.
       du1[nodeNum] = 1;
       
-    }
-    
+    }    
   }
     
   cout << grn << "Done." << rst << endl;

@@ -47,8 +47,7 @@ void specfem3d_globe::read () {
   
   vph = readParamNetcdf ("alphahKernelCrustMantle.nc");  
   vpv = readParamNetcdf ("alphavKernelCrustMantle.nc");  
-  // vsh = readParamNetcdf ("betahKernelCrustMantle.nc");
-  vsh = readParamNetcdf ("test.nc");
+  vsh = readParamNetcdf ("betahKernelCrustMantle.nc");
   vsv = readParamNetcdf ("betavKernelCrustMantle.nc");  
   eta = readParamNetcdf ("etaKernelCrustMantle.nc");
   rho = readParamNetcdf ("rhoKernelCrustMantle.nc");
