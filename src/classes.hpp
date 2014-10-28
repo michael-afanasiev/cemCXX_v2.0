@@ -45,6 +45,7 @@ void intensivePrint    (std::string);
 // MPI helper functions.
 void broadcast2DVector (std::vector<std::vector<double>>&);
 void broadcast1DVector (std::vector<int>&);
+void broadcast1DVector (std::vector<double>&);
 void broadcastInteger  (size_t &);
 void broadcastInteger  (int &);
 int  getRank           ();
@@ -114,6 +115,9 @@ protected:
   std::vector<std::vector<double>> c34, c35, c36, c44, c45, c46;
   std::vector<std::vector<double>> c55, c56, c66, eta;
   
+  // scratch par.
+  std::vector<std::vector<double>> krn;
+  
   // density.
   vector<vector<double>> rho;
 
@@ -144,6 +148,7 @@ protected:
   void rotate            ();
   void construct         ();
   void findMinMax        ();
+  void resetParams       ();
   void createKDtree      ();
   void allocateArrays    ();
   void findBoundingBox   ();
@@ -175,11 +180,12 @@ public:
   specfem3d_globe ();
   
   void read  (void);
-  void write (void) {};
+  void write (void);
   
 protected:
   
   void readCoordNetcdf ();
+  void writeParamNetcdf (vector<vector<double>> &, std::string fName);
   vector<vector<double>> readParamNetcdf (string fName);
 
 };
@@ -223,17 +229,25 @@ class mesh {
 
   friend class exodus_file;
   friend class model;
+  friend class kernel;
   
 public:
   
   mesh (exodus_file &);  
   
-  void dump        (exodus_file &);
-  void extract     (model &);
-  void interpolate (model &);
-  void interpolateTopography (discontinuity &topokate );
+  void initializeModel  (exodus_file &);
+  void initializeKernel (exodus_file &);
+  
+  void dump                  (exodus_file &);
+  void dumpKernel            (exodus_file &);
+  void extract               (model &);
+  void interpolate           (model &);
+  void interpolateTopography (discontinuity &);
+  void interpolateAndSmooth  (model &);
 
 protected:
+  
+  int myRank, worldSize;
   
   // co-ordinates.
   std::vector<double> x, y, z;  
@@ -251,8 +265,13 @@ protected:
   std::vector<double> c34, c35, c36, c44, c45, c46;
   std::vector<double> c55, c56, c66, elv, du1, du2;
   
+  std::vector<std::vector<int>> connectivityList;
+  
   // Density
   std::vector<double> rho;
+  
+  // Kernel
+  std::vector<double> krn;
   
   // connectivity array.
   std::vector<int> connectivity;
@@ -293,6 +312,7 @@ protected:
   bool checkBoundingBox (double &x, double &y, double &z);
   bool checkInterpolatingRegion (double &x, double &y, double &z, double minRad, double maxRad);
   void getSideSets ();
+  void buildConnectivityList ();
   
   void checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
                         std::vector<double> &v2, std::vector<double> &p0);
@@ -304,6 +324,7 @@ class kernel {
   
   friend class exodus_file;
   friend class model;
+  friend class mesh;
   
 private:
   
@@ -317,15 +338,17 @@ private:
   int numNodes;
   
   // counter.
-  std::vector<double> du1;
-  
+  std::vector<double> du1;  
+    
   // parameter.
   std::vector<double> value;
   
+  
 public:
   
-  kernel (exodus_file &);  
+  kernel (exodus_file &, model &);  
   void interpolate (model &mod);
+  void extract     (model &mod);
   void write (exodus_file &eFile);
 
 };

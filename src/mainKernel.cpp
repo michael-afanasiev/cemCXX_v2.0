@@ -11,21 +11,23 @@ int main () {
   specfem3d_globe modType;
   model *mod =& modType;
   
-  // if (MPI::COMM_WORLD.Get_rank () == 0)
-  // if (MPI::COMM_WORLD.Get_rank () == 3) {
-  exodus_file exo ("/Users/michaelafanasiev/Desktop/netcdfKernel/" + exoFileName, mod->regionNames);
-  
-  kernel kern (exo);
-  kern.interpolate (*mod);
+  exodus_file exo ("/Users/michaelafanasiev/Desktop/netcdfKernel/" + exoFileName,mod->regionNames);
+  mesh msh (exo);
+  msh.initializeKernel      (exo);
+  // msh.interpolateAndSmooth (*mod);
+  //
+  // if (MPI::COMM_WORLD.Get_rank () == 0) {
+  //   exo.putVarParams ();
+  //   exo.putVarNames ();
+  // }
+  // msh.dumpKernel (exo);
 
-  if (MPI::COMM_WORLD.Get_rank () == 0) {
-    exo.putVarParams ();
-    exo.putVarNames ();
-  }
-  
-  kern.write (exo);
-// }
-    
-  MPI::Finalize ();
+  // mod->reset ();
+  msh.extract (*mod);
+  mod->write ();
+
+  // the mpi finalize seems to conflict with the mpi close in the hdf5 libraries. dumb.
+  // replacing it here by an MPI_BARRIER instead.
+  MPI::COMM_WORLD.Barrier ();
 
 }

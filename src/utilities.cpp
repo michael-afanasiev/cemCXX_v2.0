@@ -228,11 +228,19 @@ int getRank () {
 
 void broadcastInteger (size_t &bInt) {
   
+  // initialize variable.
+  if (MPI::COMM_WORLD.Get_rank () > 0) 
+    bInt = 1;
+  
   MPI::COMM_WORLD.Bcast (&bInt, 1, MPI::UNSIGNED, 0);
   
 }
 
 void broadcastInteger (int &bInt) {
+  
+  // initialize variable.
+  if (MPI::COMM_WORLD.Get_rank () > 0) 
+    bInt = 1;
   
   MPI::COMM_WORLD.Bcast (&bInt, 1, MPI::INT, 0);
   
@@ -258,6 +266,31 @@ void broadcast1DVector (vector<int> &bVector) {
       bVector.resize (size);
     
     MPI::COMM_WORLD.Bcast (&bVector[0], size, MPI::INT, 0);
+  
+  }
+  
+}
+
+void broadcast1DVector (vector<double> &bVector) {
+  
+  bool broadcast=true;
+  if (MPI::COMM_WORLD.Get_rank () == 0)
+    if (bVector.empty ())
+      broadcast = false;
+      
+  MPI::COMM_WORLD.Bcast (&broadcast, 1, MPI::BOOL, 0);
+  
+  if (broadcast) {
+    
+    int size=0;
+    if (MPI::COMM_WORLD.Get_rank () == 0)
+      size = bVector.size ();
+    
+    MPI::COMM_WORLD.Bcast (&size, 1, MPI::DOUBLE, 0);
+    if (MPI::COMM_WORLD.Get_rank () >  0)
+      bVector.resize (size);
+    
+    MPI::COMM_WORLD.Bcast (&bVector[0], size, MPI::DOUBLE, 0);
   
   }
   

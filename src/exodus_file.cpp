@@ -9,28 +9,33 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
 
   // Class constructor for exodus fileName. Populates connectivity and book keeping arrays.
   
-  fileName = fname;
-  openFile ();
+  if (MPI::COMM_WORLD.Get_rank () == 0) {
   
-  getInfo         ();
-  allocate        ();
-  getNodeNumMap   ();
-  getElemNumMap   (); 
-  getConnectivity (regionNames);
-  getNodeSets     (regionNames);
+    fileName = fname;
+    openFile ();
   
-  // getSideSets     ();
+    getInfo         ();
+    allocate        ();
+    getNodeNumMap   ();
+    getConnectivity (regionNames);
+    getNodeSets     (regionNames);
   
-  printMeshInfo ();
+    printMeshInfo ();
+    
+  }
+  
+  broadcast1DVector (connectivity);
+  broadcast1DVector (nodeNumMap);
+  broadcast1DVector (interpolatingSet);
+  broadcastInteger  (numNodes);
   
 }
 
 exodus_file::~exodus_file () {
 
-  // Class destructor frees difficult memory.
-  
-  closeFile ();
-  delete [] elemNumMap;
+  // Class destructor frees difficult memory.  
+  if (MPI::COMM_WORLD.Get_rank () == 0)
+    closeFile ();
   
 }
 
@@ -57,9 +62,9 @@ void exodus_file::putVarParams () {
 
 void exodus_file::putVarNames () {
   
-  char *varNames[1];
+  const char *varNames[1];
   varNames[0] = "krn";
-  exodusCheck (ex_put_var_names (idexo, "n", 1, varNames), "ex_put_var_names");
+  exodusCheck (ex_put_var_names (idexo, "n", 1, const_cast<char**> (varNames)), "ex_put_var_names");
   
 }
 
@@ -379,20 +384,26 @@ void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y,
 
   // Passes the xyz arrays from the exodus file.
   
-  double *xmsh = new double [numNodes];
-  double *ymsh = new double [numNodes];
-  double *zmsh = new double [numNodes];
+  if (MPI::COMM_WORLD.Get_rank () == 0) {
+    double *xmsh = new double [numNodes];
+    double *ymsh = new double [numNodes];
+    double *zmsh = new double [numNodes];
   
-  exodusCheck (ex_get_coord (idexo, xmsh, ymsh, zmsh), "ex_get_coord");
+    exodusCheck (ex_get_coord (idexo, xmsh, ymsh, zmsh), "ex_get_coord");
   
-  x.resize (numNodes); y.resize (numNodes); z.resize (numNodes);
-  std::copy (xmsh, xmsh+numNodes, x.begin ());
-  std::copy (ymsh, ymsh+numNodes, y.begin ());
-  std::copy (zmsh, zmsh+numNodes, z.begin ());
+    x.resize (numNodes); y.resize (numNodes); z.resize (numNodes);
+    std::copy (xmsh, xmsh+numNodes, x.begin ());
+    std::copy (ymsh, ymsh+numNodes, y.begin ());
+    std::copy (zmsh, zmsh+numNodes, z.begin ());
   
-  delete [] xmsh;
-  delete [] ymsh;
-  delete [] zmsh;
+    delete [] xmsh;
+    delete [] ymsh;
+    delete [] zmsh;  
+  }
+  
+  broadcast1DVector (x);
+  broadcast1DVector (y);
+  broadcast1DVector (z);
   
 }
 

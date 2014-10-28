@@ -1,5 +1,6 @@
 #include "classes.hpp"
 #include <netcdf>
+#include <netcdf_par.h>
 
 using namespace std;
 
@@ -14,6 +15,7 @@ specfem3d_globe::specfem3d_globe () {
   read              ();
   findMinMaxRadius  ();
   createKDtree      ();
+  allocateArrays    ();
   
 }
 
@@ -28,6 +30,58 @@ void specfem3d_globe::read () {
   vsv = readParamNetcdf ("betavKernelCrustMantle.nc");  
   eta = readParamNetcdf ("etaKernelCrustMantle.nc");
   rho = readParamNetcdf ("rhoKernelCrustMantle.nc");
+  
+}
+
+void specfem3d_globe::write () {
+  
+  writeParamNetcdf (krn, "test.nc");
+  
+}
+
+void specfem3d_globe::writeParamNetcdf (vector<vector<double>> &vec, std::string fileName) {
+  
+  using namespace netCDF;
+  using namespace netCDF::exceptions;
+
+  cout << vec[0][0] << endl;
+  
+  int ncid, kernDimId, procDimId, varId, ids[2];
+  size_t start[2], count[2];
+  
+  size_t numParam  = x[0].size ();  
+  double *writeArr = &vec[0][0];
+  
+  cout << writeArr[0] << endl;
+  
+  try {
+    
+    nc_create_par (fileName.c_str (), NC_NETCDF4|NC_MPIIO, MPI::COMM_WORLD, MPI::INFO_NULL, &ncid);
+    nc_def_dim    (ncid, "glob", numParam,  &kernDimId);
+    nc_def_dim    (ncid, "proc", worldSize, &procDimId);
+    
+    ids[0] = procDimId;
+    ids[1] = kernDimId; 
+    
+    nc_def_var (ncid, "kernel", NC_FLOAT, 2, ids, &varId);
+    nc_enddef  (ncid);
+    
+    start[0] = myRank;
+    start[1] = 0;
+    count[0] = 1;
+    count[1] = numParam;
+    
+    nc_put_vara_double (ncid, varId, start, count, writeArr);
+    
+    nc_close (ncid);
+    
+  } catch (NcException &error) {    
+    
+    std::cout << error.what() << std::endl;
+    std::cout << red << "Failure writing: " << fileName << std::endl;
+    std::exit (EXIT_FAILURE);    
+    
+  }
   
 }
 
@@ -165,10 +219,10 @@ void specfem3d_globe::readCoordNetcdf () {
     
     } 
       
-    // Kernels are output as spherical coordinates.
-    if (interpolationType == "kernel") {
-    
-      for (size_t i=0; i<numGLLPoints; i++) {
+    // Kernels are output as spherical coordinates, while actual model parameters are output as
+    // normalized cartesian co-ordinates (why?). This takes care of the conversion.
+    for (size_t i=0; i<numGLLPoints; i++) {
+      if (interpolationType == "kernel") {
 
         double x, y, z;
         double col = yStore[i];
@@ -179,8 +233,13 @@ void specfem3d_globe::readCoordNetcdf () {
         yStore[i] = y;
         zStore[i] = z;      
       
-      }        
-    
+      } else {
+        
+        xStore[i] = xStore[i] * R_EARTH;
+        yStore[i] = yStore[i] * R_EARTH;
+        zStore[i] = zStore[i] * R_EARTH;
+        
+      }    
     }
     
     // copy to model arrays.
@@ -201,5 +260,8 @@ void specfem3d_globe::readCoordNetcdf () {
     std::exit (EXIT_FAILURE);   
 
   }
+  
+  maxRadRegion.push_back (6371.);
+  minRadRegion.push_back (3480.);
   
 }

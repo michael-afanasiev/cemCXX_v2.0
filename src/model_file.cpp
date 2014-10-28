@@ -44,63 +44,85 @@ void model::readParameterFile () {
     if (paramName[i] == "taper")
       taper = paramValue[i];
     
-  }  
+  }      
   
+}
+
+void model::resetParams () {
+  
+  vsh.clear ();
+    
 }
 
 void model::allocateArrays () {
 
   // Allocates all the moduli arrays (for use with extraction).
   
-  c11.resize (numModelRegions);
-  c12.resize (numModelRegions);
-  c13.resize (numModelRegions);
-  c14.resize (numModelRegions);
-  c15.resize (numModelRegions);
-  c16.resize (numModelRegions);
-  c22.resize (numModelRegions);
-  c23.resize (numModelRegions);
-  c24.resize (numModelRegions);
-  c25.resize (numModelRegions);
-  c26.resize (numModelRegions);
-  c33.resize (numModelRegions);
-  c34.resize (numModelRegions);
-  c35.resize (numModelRegions);
-  c36.resize (numModelRegions);
-  c44.resize (numModelRegions);
-  c45.resize (numModelRegions);
-  c46.resize (numModelRegions);
-  c55.resize (numModelRegions);
-  c56.resize (numModelRegions);
-  c66.resize (numModelRegions);
-  rho.resize (numModelRegions);
+  if (interpolationType != "kernel") {
+    
+    c11.resize (numModelRegions);
+    c12.resize (numModelRegions);
+    c13.resize (numModelRegions);
+    c14.resize (numModelRegions);
+    c15.resize (numModelRegions);
+    c16.resize (numModelRegions);
+    c22.resize (numModelRegions);
+    c23.resize (numModelRegions);
+    c24.resize (numModelRegions);
+    c25.resize (numModelRegions);
+    c26.resize (numModelRegions);
+    c33.resize (numModelRegions);
+    c34.resize (numModelRegions);
+    c35.resize (numModelRegions);
+    c36.resize (numModelRegions);
+    c44.resize (numModelRegions);
+    c45.resize (numModelRegions);
+    c46.resize (numModelRegions);
+    c55.resize (numModelRegions);
+    c56.resize (numModelRegions);
+    c66.resize (numModelRegions);
+    rho.resize (numModelRegions);
+    
+  } else if (interpolationType == "kernel") {
+    
+    krn.resize (numModelRegions);
+    
+  }
   
   for (size_t r=0; r<numModelRegions; r++) {
     
     size_t numParams = x[r].size ();
     
-    c11[r].resize (numParams);
-    c12[r].resize (numParams);
-    c13[r].resize (numParams);
-    c14[r].resize (numParams);
-    c15[r].resize (numParams);
-    c16[r].resize (numParams);
-    c22[r].resize (numParams);
-    c23[r].resize (numParams);
-    c24[r].resize (numParams);
-    c25[r].resize (numParams);
-    c26[r].resize (numParams);
-    c33[r].resize (numParams);
-    c34[r].resize (numParams);
-    c35[r].resize (numParams);
-    c36[r].resize (numParams);
-    c44[r].resize (numParams);
-    c45[r].resize (numParams);
-    c46[r].resize (numParams);
-    c55[r].resize (numParams);
-    c56[r].resize (numParams);
-    c66[r].resize (numParams);
-    rho[r].resize (numParams);  
+    if (interpolationType != "kernel") {
+      
+      c11[r].resize (numParams);
+      c12[r].resize (numParams);
+      c13[r].resize (numParams);
+      c14[r].resize (numParams);
+      c15[r].resize (numParams);
+      c16[r].resize (numParams);
+      c22[r].resize (numParams);
+      c23[r].resize (numParams);
+      c24[r].resize (numParams);
+      c25[r].resize (numParams);
+      c26[r].resize (numParams);
+      c33[r].resize (numParams);
+      c34[r].resize (numParams);
+      c35[r].resize (numParams);
+      c36[r].resize (numParams);
+      c44[r].resize (numParams);
+      c45[r].resize (numParams);
+      c46[r].resize (numParams);
+      c55[r].resize (numParams);
+      c56[r].resize (numParams);
+      c66[r].resize (numParams);
+      rho[r].resize (numParams);  
+      
+    } else if (interpolationType == "kernel") {
+      
+      krn[r].resize (numParams);
+      
+    }
     
   }
     
@@ -216,36 +238,35 @@ void model::construct () {
       
   if (symSys.compare (0, 3, "tti") == 0) {
         
-vsh.resize (numModelRegions);
-vsv.resize (numModelRegions);
-vph.resize (numModelRegions);
-vpv.resize (numModelRegions);
+    vsh.resize (numModelRegions);
+    vsv.resize (numModelRegions);
+    vph.resize (numModelRegions);
+    vpv.resize (numModelRegions);
 
-for (size_t r=0; r<numModelRegions; r++) {
+    for (size_t r=0; r<numModelRegions; r++) {
 
-size_t numParams = x[r].size ();
-vsh[r].resize (numParams);
-vsv[r].resize (numParams);
-vph[r].resize (numParams);
-vpv[r].resize (numParams);
+      size_t numParams = x[r].size ();
+      vsh[r].resize (numParams);
+      vsv[r].resize (numParams);
+      vph[r].resize (numParams);
+      vpv[r].resize (numParams);
 
-}    
-}
+    }    
+  }
 
-for (size_t r=0; r<numModelRegions; r++) {
+  for (size_t r=0; r<numModelRegions; r++) {
 
-size_t numParams = x[r].size ();
-for (size_t i=0; i<numParams; i++) {
+    size_t numParams = x[r].size ();
+    for (size_t i=0; i<numParams; i++) {
 
-if (symSys.compare (0, 3, "tti") == 0) {                
+      if (symSys.compare (0, 3, "tti") == 0) {                
 
-vsh[r][i] = sqrt (c44[r][i] / rho[r][i]);
-vsv[r][i] = sqrt (c55[r][i] / rho[r][i]);
-vpv[r][i] = sqrt (c22[r][i] / rho[r][i]);
-vph[r][i] = sqrt (c22[r][i] / rho[r][i]);
+        vsh[r][i] = sqrt (c44[r][i] / rho[r][i]);
+        vsv[r][i] = sqrt (c55[r][i] / rho[r][i]);
+        vpv[r][i] = sqrt (c22[r][i] / rho[r][i]);
+        vph[r][i] = sqrt (c22[r][i] / rho[r][i]);
 
-}                  
-}
-}
-
+      }                  
+    }
+  }  
 }

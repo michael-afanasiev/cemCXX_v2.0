@@ -4,45 +4,89 @@ using namespace std;
 
 mesh::mesh (exodus_file &eFile) {
   
+  myRank    = MPI::COMM_WORLD.Get_rank ();
+  worldSize = MPI::COMM_WORLD.Get_size ();
+  
   eFileName = eFile.returnName ();
-  getMinMaxDimensions();
   eFile.getXYZ (x, y, z);
-  
-  c11              = eFile.getVariable ("c11");  
-  c12              = eFile.getVariable ("c12");  
-  c13              = eFile.getVariable ("c13");  
-  c14              = eFile.getVariable ("c14");  
-  c15              = eFile.getVariable ("c15");  
-  c16              = eFile.getVariable ("c16");  
-  c22              = eFile.getVariable ("c22");  
-  c23              = eFile.getVariable ("c23");  
-  c24              = eFile.getVariable ("c24");  
-  c25              = eFile.getVariable ("c25");  
-  c26              = eFile.getVariable ("c26");  
-  c33              = eFile.getVariable ("c33");  
-  c34              = eFile.getVariable ("c34");  
-  c35              = eFile.getVariable ("c35");  
-  c36              = eFile.getVariable ("c36");  
-  c44              = eFile.getVariable ("c44");  
-  c45              = eFile.getVariable ("c45");  
-  c46              = eFile.getVariable ("c46");  
-  c55              = eFile.getVariable ("c55");  
-  c56              = eFile.getVariable ("c56");  
-  c66              = eFile.getVariable ("c66");  
-  rho              = eFile.getVariable ("rho");    
-  elv              = eFile.getVariable ("elv");
-  du1              = eFile.getVariable ("du1");
-  du2              = eFile.getVariable ("du2");
-  
+
   connectivity     = eFile.returnConnectivity ();
   nodeNumMap       = eFile.returnNodeNumMap   ();
   numNodes         = eFile.numNodes;
   interpolatingSet = eFile.returnInterpolatingSet ();
-  sideSetSide      = eFile.returnSideSetSide ();
-  sideSetElem      = eFile.returnSideSetElem ();
+  buildConnectivityList ();
+  
+  // sideSetSide      = eFile.returnSideSetSide ();
+  // sideSetElem      = eFile.returnSideSetElem ();
+  
+}
+
+void mesh::initializeModel (exodus_file &eFile) {
+  
+  getMinMaxDimensions();
+    
+  c11 = eFile.getVariable ("c11");  
+  c12 = eFile.getVariable ("c12");  
+  c13 = eFile.getVariable ("c13");  
+  c14 = eFile.getVariable ("c14");  
+  c15 = eFile.getVariable ("c15");  
+  c16 = eFile.getVariable ("c16");  
+  c22 = eFile.getVariable ("c22");  
+  c23 = eFile.getVariable ("c23");  
+  c24 = eFile.getVariable ("c24");  
+  c25 = eFile.getVariable ("c25");  
+  c26 = eFile.getVariable ("c26");  
+  c33 = eFile.getVariable ("c33");  
+  c34 = eFile.getVariable ("c34");  
+  c35 = eFile.getVariable ("c35");  
+  c36 = eFile.getVariable ("c36");  
+  c44 = eFile.getVariable ("c44");  
+  c45 = eFile.getVariable ("c45");  
+  c46 = eFile.getVariable ("c46");  
+  c55 = eFile.getVariable ("c55");  
+  c56 = eFile.getVariable ("c56");  
+  c66 = eFile.getVariable ("c66");  
+  rho = eFile.getVariable ("rho");    
+  elv = eFile.getVariable ("elv");
+  du1 = eFile.getVariable ("du1");
+  du2 = eFile.getVariable ("du2");  
   
   getSideSets ();
+    
+}
+
+void mesh::initializeKernel (exodus_file &eFile) {
   
+  du1.resize (numNodes);
+  krn.resize (numNodes);
+  
+  radMin = 3480.;
+  radMax = 6371.;
+  
+  getSideSets ();  
+  
+}
+
+void mesh::buildConnectivityList () {
+  
+  // This function builds a list of elements belonging to each node. Speeds up the extraction
+  // process immensely.
+  
+  size_t conSize = connectivity.size ();  
+  connectivityList.resize (conSize);  
+  intensivePrint ("Building connectivity list.");
+  
+  size_t k = 0;
+  for (size_t i=0; i<conSize; i++) {
+    
+    if (i % numNodePerElem)
+      k++;
+    
+    int nodeIndex = connectivity[i] - 1;
+    connectivityList[nodeIndex].push_back (k);        
+    
+  }
+    
 }
 
 void mesh::interpolate (model &mod) {
@@ -121,6 +165,112 @@ void mesh::interpolate (model &mod) {
   }
   
   cout << grn << "Done." << rst << endl;
+  
+}
+
+void mesh::interpolateAndSmooth (model &mod) {
+    
+  intensivePrint ("Interpolating.");
+  size_t setSize = interpolatingSet.size ();
+  int percent = (setSize) / 100.;
+  
+  struct {
+    double distance;
+    int    rank;
+  } distanceIn[numNodes], distanceOut[numNodes];
+    
+  int pCount       = 0;
+  int pIter        = 0;  
+  double searchRad = 100;  
+  double *bufValue = new double [setSize];
+  double *interpParam = new double [setSize]();
+  for (size_t i=0; i<setSize; i++) {
+
+    // extract node number.
+    size_t nodeNum = interpolatingSet[i] - 1;        
+   
+    // use du2 as a scratch array to avoid doubly visiting points.
+    if (du1[nodeNum] == 1)
+      continue;
+         
+    // find closest point [region specific].
+    for (size_t r=0; r<mod.numModelRegions; r++) {
+
+      // initialize parallel search arrrays.
+      double minDist               = 1e10;     
+      distanceIn[nodeNum].distance = minDist; 
+      distanceIn[nodeNum].rank     = myRank;
+      
+      // find all points within some radius.
+      kdres *set = kd_nearest_range3 (mod.trees[r], x[nodeNum], y[nodeNum], z[nodeNum], searchRad);
+      
+      // while we're in the set.      
+      while (kd_res_end (set) == 0) {
+        
+        // extact index of current point.
+        void *ind  = kd_res_item_data (set);
+        int point  = * (int *) ind;        
+    
+        // get distance.
+        double xDist = x[nodeNum] - mod.x[r][point];
+        double yDist = y[nodeNum] - mod.y[r][point];
+        double zDist = z[nodeNum] - mod.z[r][point];      
+        double dist  = getRadius (xDist, yDist, zDist);
+
+        // save d
+        if (dist < minDist) {
+          distanceIn[nodeNum].distance = dist;
+          distanceIn[nodeNum].rank     = myRank;
+          minDist                      = dist;
+        }
+      
+        // save param.
+        interpParam[nodeNum] += mod.vsh[r][point];
+
+        // mark that we've visited here.
+        du1[nodeNum] = 1;
+        
+        kd_res_next (set);
+      }
+    
+      int kdSetSize = kd_res_size (set);
+      if (kdSetSize != 0) {
+        interpParam[nodeNum] = interpParam[nodeNum] / kdSetSize;
+        kd_res_free (set);
+      }
+                        
+    }
+        
+    if (omp_get_thread_num () == 0) {
+      pCount++;
+      if (pCount % percent == 0) {
+        cout << pIter << " %\r" << flush;
+        pIter++;
+      }
+    }
+         
+  }
+  
+  cout << grn << "Done." << rst << endl;
+  
+  // Figure out where the minimum distance is.
+  MPI::COMM_WORLD.Allreduce (distanceIn, distanceOut, setSize, MPI_DOUBLE_INT, MPI_MINLOC);  
+  
+  for (size_t i=0; i<setSize; i++) {
+    
+    bufValue[i] = 0.;
+    if (distanceOut[i].rank == myRank)      
+      bufValue[i] = interpParam[i];              
+    
+  }
+  
+  if (myRank == 0) {
+    MPI::COMM_WORLD.Reduce (MPI_IN_PLACE, bufValue, setSize, MPI_DOUBLE, MPI_SUM, 0);
+  } else {
+    MPI::COMM_WORLD.Reduce (bufValue,     bufValue, setSize, MPI_DOUBLE, MPI_SUM, 0);
+  }
+  
+  std::copy (bufValue, bufValue+setSize, krn.begin ());  
   
 }
 
@@ -233,20 +383,23 @@ void mesh::extract (model &mod) {
     // Initialize percentage reporting.
     int percent      = (numParams) / 100.;
     int pIter        = 0;    
-            
+
+
 #pragma omp parallel for firstprivate (searchRadius, r) schedule (guided)
     for (size_t i=0; i<numParams; i++) {
 
       double xTarget = mod.x[r][i];
       double yTarget = mod.y[r][i];
       double zTarget = mod.z[r][i];
-
         
       // Check if we're within the (coarse) mesh bounds.
-      if (checkBoundingBox (xTarget, yTarget, zTarget)) {
+      // if (checkBoundingBox (xTarget, yTarget, zTarget)) {
 
         // Assume we haven't found the enclosing tet, and begin searching.
         bool found = false;
+        // if (myRank == 0)
+        // cout << "Took " << (float) t / CLOCKS_PER_SEC << " seconds on proc. " << myRank << endl;
+  
         while (not found) {
           
           // Define vector with target point.
@@ -254,6 +407,7 @@ void mesh::extract (model &mod) {
           
           // Get the set of nearest points to target point, with a dynamically set searchRadius.
           kdres *set = kd_nearest_range3 (tree, xTarget, yTarget, zTarget, searchRadius);
+          
 
           // Initialize node and iterator numbers.
           size_t n0=0, n1=0, n2=0, n3=0;
@@ -268,6 +422,7 @@ void mesh::extract (model &mod) {
             int point = * (int *) ind;
           
             // Loop over the entire connectivity array.
+            clock_t t = clock ();          
             for (size_t e=0; e<sizeConnect; e++) {
           
               // If the entry in connectivity array matches the index of the point we need 
@@ -317,30 +472,38 @@ void mesh::extract (model &mod) {
                 double l0, l1, l2, l3;
                 found = testInsideTet (v0, v1, v2, v3, p0, l0, l1, l2, l3);
                 if (found == true) {
-                
-                  mod.c11[r][i] = interpolateTet (c11, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c12[r][i] = interpolateTet (c12, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c13[r][i] = interpolateTet (c13, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c14[r][i] = interpolateTet (c14, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c15[r][i] = interpolateTet (c15, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c16[r][i] = interpolateTet (c16, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c22[r][i] = interpolateTet (c22, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c23[r][i] = interpolateTet (c23, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c24[r][i] = interpolateTet (c24, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c25[r][i] = interpolateTet (c25, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c26[r][i] = interpolateTet (c26, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c33[r][i] = interpolateTet (c33, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c34[r][i] = interpolateTet (c34, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c35[r][i] = interpolateTet (c35, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c36[r][i] = interpolateTet (c36, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c44[r][i] = interpolateTet (c44, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c45[r][i] = interpolateTet (c45, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c46[r][i] = interpolateTet (c46, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c55[r][i] = interpolateTet (c55, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  
+
+                  if (mod.interpolationType != "kernel") {
+                    
+                    mod.c11[r][i] = interpolateTet (c11, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c12[r][i] = interpolateTet (c12, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c13[r][i] = interpolateTet (c13, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c14[r][i] = interpolateTet (c14, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c15[r][i] = interpolateTet (c15, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c16[r][i] = interpolateTet (c16, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c22[r][i] = interpolateTet (c22, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c23[r][i] = interpolateTet (c23, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c24[r][i] = interpolateTet (c24, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c25[r][i] = interpolateTet (c25, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c26[r][i] = interpolateTet (c26, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c33[r][i] = interpolateTet (c33, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c34[r][i] = interpolateTet (c34, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c35[r][i] = interpolateTet (c35, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c36[r][i] = interpolateTet (c36, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c44[r][i] = interpolateTet (c44, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c45[r][i] = interpolateTet (c45, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c46[r][i] = interpolateTet (c46, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c55[r][i] = interpolateTet (c55, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
+                    
+                  } else if (mod.interpolationType == "kernel") {
+                    
+                    mod.krn[r][i] = interpolateTet (krn, n0, n1, n2, n3, l0, l1, l2, l3);
+                    
+                  }
+
                   // Keep the search radius tight, and break out of loop.
                   searchRadius = searchRadius - searchRadius * ONE_PERCENT;
                   
@@ -348,12 +511,17 @@ void mesh::extract (model &mod) {
                 
                 }            
               }          
-            }        
+            }   
+            t = clock () - t;
+            if (myRank == 0)
+            cout << "Took " << (float) t / CLOCKS_PER_SEC << " seconds TO FINISH on proc. " << myRank << endl;
+                 
       
             // Advance the result set if we haven't yet found our man.
             kd_res_next (set);
         
           }
+          
         
           // Increase the search radius if we haven't yet found our man.
           if (not found)
@@ -371,8 +539,10 @@ void mesh::extract (model &mod) {
             kd_res_free (set);
           
         }                        
-      }  
+      // }
       
+      
+        // cout << i << ' ' << myRank << endl;
       // Percent reporting TODO move this to a function.      
 #pragma omp critical
       {
@@ -381,7 +551,9 @@ void mesh::extract (model &mod) {
           cout << pIter << " %\r" << flush;
           pIter++;
         }
-      }      
+      }
+      
+            
     }
         
   }
@@ -839,4 +1011,11 @@ bool mesh::checkBoundingBox (double &x, double &y, double &z) {
     return false;
   }
       
+}
+
+void mesh::dumpKernel (exodus_file &eFile) {
+  
+  if (myRank == 0)
+    eFile.writeVariable (krn, "krn");
+  
 }
