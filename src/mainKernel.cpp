@@ -14,15 +14,14 @@ int main () {
   exodus_file exo ("/Users/michaelafanasiev/Desktop/netcdfKernel/" + exoFileName,mod->regionNames);
   mesh msh (exo);
   msh.initializeKernel      (exo);
-  // msh.interpolateAndSmooth (*mod);
-  //
-  // if (MPI::COMM_WORLD.Get_rank () == 0) {
-  //   exo.putVarParams ();
-  //   exo.putVarNames ();
-  // }
-  // msh.dumpKernel (exo);
+  msh.interpolateAndSmooth (*mod);
 
-  // mod->reset ();
+  if (MPI::COMM_WORLD.Get_rank () == 0) {
+    exo.putVarParams ();
+    exo.putVarNames ();
+  }
+  msh.dumpKernel (exo);
+
   msh.extract (*mod);
   mod->write ();
 

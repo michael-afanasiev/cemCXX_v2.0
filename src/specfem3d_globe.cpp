@@ -13,9 +13,30 @@ specfem3d_globe::specfem3d_globe () {
 
   readParameterFile ();
   read              ();
+  adjustRegions     ();
   findMinMaxRadius  ();
   createKDtree      ();
   allocateArrays    ();
+  
+}
+
+void specfem3d_globe::adjustRegions () {
+  
+  size_t numGLLpoints = x[0].size ();
+  for (size_t i=0; i<numGLLpoints; i++) {
+    
+    double colLoc, lonLoc, radLoc;
+    xyz2ColLonRad (x[0][i], y[0][i], z[0][i], colLoc, lonLoc, radLoc);
+    
+    if (radLoc < 3480) 
+      radLoc = 3480.;
+    
+    if (radLoc > R_EARTH)
+      radLoc = R_EARTH;
+    
+    colLonRad2xyz (x[0][i], y[0][i], z[0][i], colLoc, lonLoc, radLoc);
+    
+  }
   
 }
 
@@ -26,7 +47,8 @@ void specfem3d_globe::read () {
   
   vph = readParamNetcdf ("alphahKernelCrustMantle.nc");  
   vpv = readParamNetcdf ("alphavKernelCrustMantle.nc");  
-  vsh = readParamNetcdf ("betahKernelCrustMantle.nc");  
+  // vsh = readParamNetcdf ("betahKernelCrustMantle.nc");
+  vsh = readParamNetcdf ("test.nc");
   vsv = readParamNetcdf ("betavKernelCrustMantle.nc");  
   eta = readParamNetcdf ("etaKernelCrustMantle.nc");
   rho = readParamNetcdf ("rhoKernelCrustMantle.nc");
@@ -43,16 +65,12 @@ void specfem3d_globe::writeParamNetcdf (vector<vector<double>> &vec, std::string
   
   using namespace netCDF;
   using namespace netCDF::exceptions;
-
-  cout << vec[0][0] << endl;
   
   int ncid, kernDimId, procDimId, varId, ids[2];
   size_t start[2], count[2];
   
   size_t numParam  = x[0].size ();  
   double *writeArr = &vec[0][0];
-  
-  cout << writeArr[0] << endl;
   
   try {
     
@@ -63,7 +81,7 @@ void specfem3d_globe::writeParamNetcdf (vector<vector<double>> &vec, std::string
     ids[0] = procDimId;
     ids[1] = kernDimId; 
     
-    nc_def_var (ncid, "kernel", NC_FLOAT, 2, ids, &varId);
+    nc_def_var (ncid, "rawKernel", NC_FLOAT, 2, ids, &varId);
     nc_enddef  (ncid);
     
     start[0] = myRank;

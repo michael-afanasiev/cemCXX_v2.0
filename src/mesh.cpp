@@ -79,11 +79,11 @@ void mesh::buildConnectivityList () {
   size_t k = 0;
   for (size_t i=0; i<conSize; i++) {
     
-    if (i % numNodePerElem)
-      k++;
-    
     int nodeIndex = connectivity[i] - 1;
-    connectivityList[nodeIndex].push_back (k);        
+    connectivityList[nodeIndex].push_back (k);            
+    
+    if (((i+1) % numNodePerElem) == 0)
+      k++;    
     
   }
     
@@ -423,33 +423,52 @@ void mesh::extract (model &mod) {
           
             // Loop over the entire connectivity array.
             clock_t t = clock ();          
-            for (size_t e=0; e<sizeConnect; e++) {
+            
+            // size of the attached element array/
+            size_t listSize = connectivityList[point].size ();
+            
+            for (size_t e=0; e<listSize; e++) {
+              
+              i0 = connectivityList[point][e] * numNodePerElem + 0;
+              i1 = connectivityList[point][e] * numNodePerElem + 1;
+              i2 = connectivityList[point][e] * numNodePerElem + 2;
+              i3 = connectivityList[point][e] * numNodePerElem + 3;
+              
+              n0 = connectivity[i0] - 1;
+              n1 = connectivity[i1] - 1;
+              n2 = connectivity[i2] - 1;
+              n3 = connectivity[i3] - 1;
           
               // If the entry in connectivity array matches the index of the point we need 
               // (remember: all indices are node numbers - 1, due to node numbering starting at
               // one and c arrays starting at zero), figure out which element belongs to the point.
               // The else ifs here take care of the striding in the connectivity array.
-              if ((connectivity[e] - 1) == point) {
-      
-                if        (e % numNodePerElem == 0) {
-                  i0 = e+0; i1 = e+1;
-                  i2 = e+2; i3 = e+3;
-                } else if (e % numNodePerElem == 1) {
-                  i0 = e-1; i1 = e+0;
-                  i2 = e+1; i3 = e+2;
-                } else if (e % numNodePerElem == 2) {
-                  i0 = e-2; i1 = e-1;
-                  i2 = e+0; i3 = e+1;
-                } else if (e % numNodePerElem == 3) {
-                  i0 = e-3; i1 = e-2; 
-                  i2 = e-1; i3 = e+0;
-                }         
-                                   
-                // Again, the actual node indices are the node numbers - 1.
-                n0 = connectivity[i0]-1;
-                n1 = connectivity[i1]-1;
-                n2 = connectivity[i2]-1;
-                n3 = connectivity[i3]-1;
+              // if ((connectivity[e] - 1) == point) {
+              //
+              //   if        (e % numNodePerElem == 0) {
+              //     i0 = e+0; i1 = e+1;
+              //     i2 = e+2; i3 = e+3;
+              //   } else if (e % numNodePerElem == 1) {
+              //     i0 = e-1; i1 = e+0;
+              //     i2 = e+1; i3 = e+2;
+              //   } else if (e % numNodePerElem == 2) {
+              //     i0 = e-2; i1 = e-1;
+              //     i2 = e+0; i3 = e+1;
+              //   } else if (e % numNodePerElem == 3) {
+              //     i0 = e-3; i1 = e-2;
+              //     i2 = e-1; i3 = e+0;
+              //   }
+              //
+              //   // Again, the actual node indices are the node numbers - 1.
+              //   n0 = connectivity[i0]-1;
+              //   n1 = connectivity[i1]-1;
+              //   n2 = connectivity[i2]-1;
+              //   n3 = connectivity[i3]-1;
+              
+//               if (myRank == 0) {
+//                 cout << n0 << ' ' << n1 << ' ' << n2 << ' ' << n3 << ' ' << sizeConnect << endl;
+//                 cout << i0 << ' ' << i1 << ' ' << i2 << ' ' << i3 << ' ' << sizeConnect << endl;
+// }
                                                 
                 // Set up our four vectors which define the edge of the tet.
                 std::vector<double> v0 = returnVector (x[n0], y[n0], z[n0]);
@@ -510,11 +529,11 @@ void mesh::extract (model &mod) {
                   break;               
                 
                 }            
-              }          
+              // }
             }   
             t = clock () - t;
-            if (myRank == 0)
-            cout << "Took " << (float) t / CLOCKS_PER_SEC << " seconds TO FINISH on proc. " << myRank << endl;
+            // if (myRank == 0)
+            // cout << "Took " << (float) t / CLOCKS_PER_SEC << " seconds TO FINISH on proc. " << myRank << endl;
                  
       
             // Advance the result set if we haven't yet found our man.
@@ -532,6 +551,10 @@ void mesh::extract (model &mod) {
             double col, lon, rad;
             xyz2ColLonRad (xTarget, yTarget, zTarget, col, lon, rad);
             cout << rad2Deg(col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
+            cout << myRank << endl;
+            // mod.krn[r][i] = 0.;
+            // found = true;
+            // searchRadius = 1.;
           }
 
           // If we actually have a results set, let's free the memory needed for the next pass.
@@ -625,13 +648,15 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
     p0[1] = p0[1] + (n0[1]) * (dif + TINY);
     p0[2] = p0[2] + (n0[2]) * (dif + TINY);
 
-  } else if (pRadius < dist && (abs (pRadius-radMin) < CLOSE)) {
+  } else if ((pRadius < dist) && (pRadius < radMin)) { // (abs (pRadius-radMin) < CLOSE)) {
 
     double dif = abs (radMin - dist);
+    cout << getRadius (p0[0], p0[1], p0[2]) << ' ' << myRank << endl;
     p0[0] = p0[0] + n0[0] * (dif + TINY) * (-1);
     p0[1] = p0[1] + n0[1] * (dif + TINY) * (-1);
     p0[2] = p0[2] + n0[2] * (dif + TINY) * (-1);
-
+    cout << getRadius (p0[0], p0[1], p0[2]) << ' ' << dif << ' ' << myRank << endl;
+    
   }
            
 }

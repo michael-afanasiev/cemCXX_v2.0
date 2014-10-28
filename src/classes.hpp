@@ -184,6 +184,7 @@ public:
   
 protected:
   
+  void adjustRegions ();
   void readCoordNetcdf ();
   void writeParamNetcdf (vector<vector<double>> &, std::string fName);
   vector<vector<double>> readParamNetcdf (string fName);
