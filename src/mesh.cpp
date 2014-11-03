@@ -9,16 +9,15 @@ mesh::mesh (exodus_file &eFile) {
   
   eFileName = eFile.returnName ();
   eFile.getXYZ (x, y, z);
+  
+  cout << "HERE MY NAME IS " << myRank << endl;
 
   connectivity     = eFile.returnConnectivity ();
   nodeNumMap       = eFile.returnNodeNumMap   ();
   numNodes         = eFile.numNodes;
   interpolatingSet = eFile.returnInterpolatingSet ();
   buildConnectivityList ();
-  
-  // sideSetSide      = eFile.returnSideSetSide ();
-  // sideSetElem      = eFile.returnSideSetElem ();
-  
+    
 }
 
 void mesh::initializeModel (exodus_file &eFile) {
@@ -220,6 +219,17 @@ void mesh::interpolateAndSmooth (model &mod) {
 
     // extract node number.
     size_t nodeNum = interpolatingSet[i] - 1;        
+   
+    if (not (mod.checkBoundingBox (x[nodeNum], y[nodeNum], z[nodeNum]))) {
+      // cout << "OUT " << myRank << " " << nodeNum << endl;
+      continue;
+    } else { 
+      
+      // if (nodeNum == 0)
+      cout << " IN " << myRank << " " << nodeNum << endl;
+    
+    }
+      
    
     // use du2 as a scratch array to avoid doubly visiting points.
     if (du1[nodeNum] == 1)

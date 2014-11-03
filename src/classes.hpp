@@ -50,11 +50,13 @@ void fileSavePrint     (std::string);
 // MPI helper functions.
 void broadcast2DVector (std::vector<std::vector<double>>&);
 void broadcast1DVector (std::vector<int>&);
+void sum1DVector       (std::vector<double>&);
 void broadcast1DVector (std::vector<double>&);
 void broadcastInteger  (size_t &);
 void broadcastInteger  (int &);
 void broadcastString   (string);
 int  getRank           ();
+size_t getSmallestIndex (std::vector<double>&);
 
 // Math functions
 void xyz2ColLonRad     (double &x, double &y, double &z, double &col, double &lon, double &rad);                                                                         
@@ -95,8 +97,8 @@ class model {
 
 protected:
   
-  int myRank;
-  int worldSize;
+  size_t myRank;
+  size_t worldSize;
   
   // Parameter file.
   std::string path;
@@ -142,26 +144,33 @@ protected:
   double angle, xRot, yRot, zRot;
   
   // Model extremes [physical].
-  std::vector<double> xMin, yMin, zMin;
-  std::vector<double> xMax, yMax, zMax;
+  double xMin, yMin, zMin;
+  double xMax, yMax, zMax;
   std::vector<double> minRadRegion, maxRadRegion;
+  
+  // MPI neighbours.
+  std::vector<size_t> neighbourArray;
 
   // Center of box.
-  double xCtr, yCtr, zCtr;  
+  std::vector<double> xCtr, yCtr, zCtr;  
  
 
   // Internal functions.
-  void rotate            ();
-  void construct         ();
-  void findMinMax        ();
-  void resetParams       ();
-  void createKDtree      ();
-  void allocateArrays    ();
-  void findBoundingBox   ();
-  void findMinMaxRadius  ();  
-  void readParameterFile ();
+  void rotate                      ();
+  void construct                   ();
+  void findMinMax                  ();
+  void findMinMaxCartesian         ();
+  void resetParams                 ();
+  void createKDtree                ();
+  void allocateArrays              ();
+  void findBoundingBox             ();
+  void findMinMaxRadius            ();  
+  void findChunkCenters            ();
+  void readParameterFile           ();
+  void findNeighbouringChunks      ();
+  void broadcastNeighbouringChunks ();
   
-  int testBoundingBox (double x, double y, double z);
+  bool checkBoundingBox (double &x, double &y, double &z);
   
 public:
   
@@ -419,6 +428,7 @@ protected:
   void getNodeNumMap    ();
   void getElemNumMap    ();
   void openFile         ();  
+  void openFileWrite    ();
   void closeFile        ();
   void getSideSets      ();
   void getConnectivity  (std::vector<std::string> regionNames);

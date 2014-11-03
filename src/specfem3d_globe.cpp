@@ -10,14 +10,24 @@ specfem3d_globe::specfem3d_globe () {
   myRank    = MPI::COMM_WORLD.Get_rank ();
   worldSize = MPI::COMM_WORLD.Get_size ();
   
-  numModelRegions = 3;
 
   readParameterFile ();
-  read              ();
-  adjustRegions     ();
-  findMinMaxRadius  ();
-//  createKDtree      ();
-  allocateArrays    ();
+  
+  if (interpolationType == "kernel") {
+    numModelRegions = 1;
+  } else {
+    numModelRegions = 3;
+  }
+  
+  read                        ();
+  adjustRegions               ();
+  findMinMaxRadius            ();
+  findMinMaxCartesian         ();
+  findChunkCenters            ();
+  findNeighbouringChunks      ();
+  broadcastNeighbouringChunks ();
+  createKDtree                ();
+  allocateArrays              ();
   
 }
 
@@ -66,6 +76,7 @@ void specfem3d_globe::adjustRegions () {
       colLonRad2xyz (x[r][i], y[r][i], z[r][i], colLoc, lonLoc, radLoc);
 
     }
+    
   }
 
 }
@@ -75,10 +86,13 @@ void specfem3d_globe::read () {
   intensivePrint  ("Reading specfem3d_globe model.");
   readCoordNetcdf ("xyz_reg01.nc");
   MPI::COMM_WORLD.Barrier ();
-  readCoordNetcdf ("xyz_reg02.nc");
-  MPI::COMM_WORLD.Barrier ();
-  readCoordNetcdf ("xyz_reg03.nc");
-  MPI::COMM_WORLD.Barrier ();
+  
+  if (interpolationType != "kernel") {
+    readCoordNetcdf ("xyz_reg02.nc");
+    MPI::COMM_WORLD.Barrier ();
+    readCoordNetcdf ("xyz_reg03.nc");
+    MPI::COMM_WORLD.Barrier ();
+  }
 
   if (interpolationType == "kernel") {
 
@@ -139,8 +153,6 @@ void specfem3d_globe::write () {
 }
 
 void specfem3d_globe::writeParamNetcdfSerial (vector<double> &vec, std::string fileName) {
-
-  static const int NC_ERR = 2;
 
   using namespace netCDF;
   using namespace netCDF::exceptions;
@@ -255,8 +267,8 @@ vector<vector<double>> specfem3d_globe::readParamNetcdf (std::string fName) {
     // Get array sizes.
     NcDim procDim = NcKernel.getDim (0);
     NcDim kernDim = NcKernel.getDim (1);  
-    int numWroteProcs = procDim.getSize ();
-    int numGLLPoints  = kernDim.getSize ();
+    size_t numWroteProcs = procDim.getSize ();
+    size_t numGLLPoints  = kernDim.getSize ();
   
     if (myRank == 0)
       std::cout << mgn << "Number of solver processers:\t " << numWroteProcs
@@ -320,22 +332,23 @@ void specfem3d_globe::readCoordNetcdf (std::string fileName) {
 
     NcVar NcRadius; NcVar NcTheta; NcVar NcPhi;
     if (interpolationType == "kernel") {
-      NcVar NcRadius = dataFile.getVar ("radius");
-      NcVar NcTheta  = dataFile.getVar ("theta");
-      NcVar NcPhi    = dataFile.getVar ("phi");
+      
+      NcRadius = dataFile.getVar ("radius");      
+      NcTheta  = dataFile.getVar ("theta");
+      NcPhi    = dataFile.getVar ("phi");
 
     } else {
 
       NcRadius = dataFile.getVar ("x");
       NcTheta  = dataFile.getVar ("y");
       NcPhi    = dataFile.getVar ("z");
+      
     }
-
   
     // Get array sizes.
     NcDim procDim     = NcRadius.getDim (0);
     NcDim coordDim    = NcRadius.getDim (1);
-    int numWroteProcs = procDim.getSize ();
+    size_t numWroteProcs = procDim.getSize ();
     size_t numGLLPoints  = coordDim.getSize ();
   
     if (myRank == 0)
@@ -368,6 +381,7 @@ void specfem3d_globe::readCoordNetcdf (std::string fileName) {
     double *zStore = new double [numGLLPoints];
   
     // Of course only read in with the number of processors used to create the file.
+    
     if (myRank < numWroteProcs) {
         
       NcRadius.getVar (start, count, xStore);

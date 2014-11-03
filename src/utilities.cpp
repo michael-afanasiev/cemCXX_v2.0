@@ -289,6 +289,13 @@ void broadcast1DVector (vector<int> &bVector) {
   
 }
 
+void sum1DVector (vector<double> &bVector) {
+  
+  int size = bVector.size ();
+  MPI::COMM_WORLD.Allreduce (MPI_IN_PLACE, &bVector[0], size, MPI::DOUBLE, MPI::SUM);
+  
+}
+
 void broadcast1DVector (vector<double> &bVector) {
   
   bool broadcast=true;
@@ -375,6 +382,18 @@ std::vector<double> returnVector (double &x, double &y, double &z) {
   vec[2] = z;
   
   return vec;    
+  
+}
+
+size_t getSmallestIndex (vector<double> &vec) {
+  
+  size_t index=0;
+  for (size_t i=1; i<vec.size (); i++) {
+    if (vec[i] < vec[index])
+      index = i;
+  }
+  
+  return index;
   
 }
 

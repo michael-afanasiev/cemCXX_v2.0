@@ -41,6 +41,21 @@ exodus_file::~exodus_file () {
   
 }
 
+void exodus_file::openFileWrite () {
+  
+  // Opens an exodus file, populates the idexo field, gathers basic information, and allocates
+  // the appropriate arrays.
+  
+  std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
+  idexo = ex_open (fileName.c_str(), EX_WRITE, &comp_ws, &io_ws, &vers);
+  if (idexo < 0) {
+    std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
+      << std::flush << std::endl;
+    exit (EXIT_FAILURE);
+  }
+    
+}
+
 void exodus_file::openFile () {
   
   // Opens an exodus file, populates the idexo field, gathers basic information, and allocates

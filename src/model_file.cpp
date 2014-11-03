@@ -2,6 +2,131 @@
 
 using namespace std;
 
+void model::findChunkCenters () {
+  
+  vector<double> ctr (3, 0);
+  xCtr.resize (worldSize);
+  yCtr.resize (worldSize);
+  zCtr.resize (worldSize);
+
+  double xAvg=0;
+  double yAvg=0;
+  double zAvg=0;
+  size_t totParam=0;
+  for (size_t r=0; r<numModelRegions; r++) {
+
+    size_t numParam = x[r].size ();
+    for (size_t i=0; i<numParam; i++) {
+
+      xAvg += x[r][i];
+      yAvg += y[r][i];
+      zAvg += z[r][i];
+      totParam++;
+
+    }
+  }
+
+  xCtr[myRank] = xAvg / totParam;
+  yCtr[myRank] = yAvg / totParam;
+  zCtr[myRank] = zAvg / totParam;
+    
+}
+
+void model::findNeighbouringChunks () {
+  
+  sum1DVector (xCtr);
+  sum1DVector (yCtr);
+  sum1DVector (zCtr);
+  
+  vector<double> distArray (worldSize, 0);  
+  for (size_t i=0; i<worldSize; i++) {
+    
+    double xDist = xCtr[myRank] - xCtr[i];
+    double yDist = yCtr[myRank] - yCtr[i];
+    double zDist = zCtr[myRank] - zCtr[i];
+    
+    if (getRadius (xDist, yDist, zDist) != 0) {
+      distArray[i] = getRadius (xDist, yDist, zDist);                
+    } else {
+      distArray[i] = 1e10;
+    }
+    
+  }
+  
+  while (neighbourArray.size () < 8) {
+    
+    size_t ind = getSmallestIndex (distArray);
+    neighbourArray.push_back (ind);
+    distArray[ind] = 1e10;
+    
+    if (neighbourArray.size () == (worldSize - 1))
+      break;
+    
+  }
+  
+  std::sort (neighbourArray.begin (), neighbourArray.end ());
+  
+}
+
+void model::broadcastNeighbouringChunks () {
+  
+/*
+  Function to broadcast all neighbouring chunk arrays.
+*/
+
+  // Definitions.
+  size_t numBroadcast  = vsh[0].size ();
+  size_t numNeighbours = neighbourArray.size ();  
+  int X_TAG            = 0;
+  int Y_TAG            = 1;
+  int Z_TAG            = 2;
+  int KRN_TAG          = 3;
+  
+  // Allocations.
+  double *recX   = new double [numBroadcast];
+  double *recY   = new double [numBroadcast];
+  double *recZ   = new double [numBroadcast];
+  double *recKrn = new double [numBroadcast];
+  
+  // For all neighbours previously found, broadcast full arrays to each processor.
+  for (size_t i=0; i<numNeighbours; i++) {
+  
+    MPI::COMM_WORLD.Isend (&x[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], X_TAG);
+    MPI::COMM_WORLD.Isend (&y[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], Y_TAG);
+    MPI::COMM_WORLD.Isend (&z[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], Z_TAG);
+    MPI::COMM_WORLD.Isend (&vsh[0][0], numBroadcast, MPI::DOUBLE, neighbourArray[i], KRN_TAG);
+    
+  }
+  
+  for (size_t i=0; i<numNeighbours; i++) {
+    
+    cout << myRank << ' ' << neighbourArray[i] << endl;
+    
+    MPI::COMM_WORLD.Recv (recX,   numBroadcast, MPI::DOUBLE, neighbourArray[i], X_TAG);
+    MPI::COMM_WORLD.Recv (recY,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Y_TAG);
+    MPI::COMM_WORLD.Recv (recZ,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Z_TAG);
+    MPI::COMM_WORLD.Recv (recKrn, numBroadcast, MPI::DOUBLE, neighbourArray[i], KRN_TAG);
+    
+    cout << recX[0] << ' ' << myRank << ' ' << numNeighbours << endl;
+
+    x[0].insert   (x[0].end (),   recX,   recX+numBroadcast);
+    y[0].insert   (y[0].end (),   recY,   recY+numBroadcast);
+    z[0].insert   (z[0].end (),   recZ,   recZ+numBroadcast);
+    vsh[0].insert (vsh[0].end (), recKrn, recKrn+numBroadcast);
+    
+    MPI::COMM_WORLD.Barrier ();
+
+  }
+    
+  delete [] recX;
+  delete [] recY;
+  delete [] recZ;
+  delete [] recKrn;
+  
+  cout << "BROADCASTED: " << myRank << endl;
+  
+}
+
 void model::readParameterFile () {
   
   ifstream inputFile ("./mod/parameters.txt");
@@ -233,6 +358,55 @@ void model::findMinMaxRadius () {
     }
   }
     
+}
+
+void model::findMinMaxCartesian () {
+  
+  xMin = x[0][0];
+  xMax = x[0][0];
+  yMin = y[0][0];
+  yMax = y[0][0];
+  zMin = z[0][0];
+  zMax = z[0][0];
+  
+  for (size_t r=0; r<numModelRegions; r++) {
+    
+    size_t numParams = x[r].size ();
+    for (size_t i=0; i<numParams; i++) {
+      
+      if (x[r][i] < xMin)
+        xMin = x[r][i];
+      
+      if (x[r][i] > xMax)
+        xMax = x[r][i];
+      
+      if (y[r][i] < yMin)
+        yMin = y[r][i];
+      
+      if (y[r][i] > yMax)
+        yMax = y[r][i];
+      
+      if (z[r][i] < zMin)
+        zMin = z[r][i];
+      
+      if (z[r][i] > zMax)
+        zMax = z[r][i];                        
+      
+    }
+  }
+  
+}
+
+bool model::checkBoundingBox (double &x, double &y, double &z) {
+
+  if (x   <= xMax   && x   >= xMin &&
+      y   <= yMax   && y   >= yMin &&
+      z   <= zMax   && z   >= zMin) {
+    return true;
+  } else {
+    return false;
+  }
+      
 }
 
 void model::construct () {
