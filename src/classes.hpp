@@ -1,3 +1,8 @@
+#include "mpi.h"
+
+#include <cstdlib>
+#include <string>
+#include <iomanip>
 #include <algorithm>
 #include <iostream>
 #include <fstream>
@@ -13,7 +18,6 @@
 #include <omp.h>
 
 #include "kdtree.h"
-#include "mpi.h"
 
 using namespace std;
 
@@ -41,6 +45,7 @@ const std::string blu = "\x1b[36m";
 // Message helper functions.
 void error             (std::string);
 void intensivePrint    (std::string);
+void fileSavePrint     (std::string);
 
 // MPI helper functions.
 void broadcast2DVector (std::vector<std::vector<double>>&);
@@ -48,6 +53,7 @@ void broadcast1DVector (std::vector<int>&);
 void broadcast1DVector (std::vector<double>&);
 void broadcastInteger  (size_t &);
 void broadcastInteger  (int &);
+void broadcastString   (string);
 int  getRank           ();
 
 // Math functions
@@ -185,8 +191,9 @@ public:
 protected:
   
   void adjustRegions ();
-  void readCoordNetcdf ();
-  void writeParamNetcdf (vector<vector<double>> &, std::string fName);
+  void readCoordNetcdf (std::string fileName);
+  void writeParamNetcdf (vector<double> &, std::string fName);
+  void writeParamNetcdfSerial (vector<double> &, std::string fName);
   vector<vector<double>> readParamNetcdf (string fName);
 
 };

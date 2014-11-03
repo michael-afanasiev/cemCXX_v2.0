@@ -9,9 +9,9 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
 
   // Class constructor for exodus fileName. Populates connectivity and book keeping arrays.
   
-  if (MPI::COMM_WORLD.Get_rank () == 0) {
   
-    fileName = fname;
+  fileName = fname;
+//  if (MPI::COMM_WORLD.Get_rank () == 0) {
     openFile ();
   
     getInfo         ();
@@ -22,19 +22,21 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
   
     printMeshInfo ();
     
-  }
+//  }
   
-  broadcast1DVector (connectivity);
-  broadcast1DVector (nodeNumMap);
-  broadcast1DVector (interpolatingSet);
-  broadcastInteger  (numNodes);
+//  broadcast1DVector (connectivity);
+//  broadcast1DVector (nodeNumMap);
+//  broadcast1DVector (interpolatingSet);
+//  broadcastInteger  (numNodes);
+
+//  cout << "BROADCASTED: " << MPI::COMM_WORLD.Get_rank () << endl;
   
 }
 
 exodus_file::~exodus_file () {
 
   // Class destructor frees difficult memory.  
-  if (MPI::COMM_WORLD.Get_rank () == 0)
+//  if (MPI::COMM_WORLD.Get_rank () == 0)
     closeFile ();
   
 }
@@ -45,7 +47,7 @@ void exodus_file::openFile () {
   // the appropriate arrays.
   
   std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
-  idexo = ex_open (fileName.c_str(), EX_WRITE, &comp_ws, &io_ws, &vers);
+  idexo = ex_open (fileName.c_str(), EX_READ, &comp_ws, &io_ws, &vers);
   if (idexo < 0) {
     std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
       << std::flush << std::endl;
@@ -384,7 +386,7 @@ void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y,
 
   // Passes the xyz arrays from the exodus file.
   
-  if (MPI::COMM_WORLD.Get_rank () == 0) {
+//  if (MPI::COMM_WORLD.Get_rank () == 0) {
     double *xmsh = new double [numNodes];
     double *ymsh = new double [numNodes];
     double *zmsh = new double [numNodes];
@@ -399,11 +401,11 @@ void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y,
     delete [] xmsh;
     delete [] ymsh;
     delete [] zmsh;  
-  }
+//  }
   
-  broadcast1DVector (x);
-  broadcast1DVector (y);
-  broadcast1DVector (z);
+//  broadcast1DVector (x);
+//  broadcast1DVector (y);
+//  broadcast1DVector (z);
   
 }
 

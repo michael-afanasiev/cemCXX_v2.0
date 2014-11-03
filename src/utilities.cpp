@@ -69,8 +69,11 @@ std::vector<string> getRequiredChunks (model &mod) {
                         
           if ((radMax >= *std::min_element (mod.rMin.begin (), mod.rMin.end ())) && 
               (fileName.find (*colIter) != std::string::npos) &&
-              (fileName.find (*lonIter) != std::string::npos))                
+              (fileName.find (*lonIter) != std::string::npos)) {
+
             modelChunks.push_back (mod.meshDirectory + "/" + fileName);
+
+          }
                             
         }
       }
@@ -226,6 +229,21 @@ int getRank () {
   
 }
 
+void broadcastString (std::string message) {
+
+  cout <<"HI" << endl;
+  int strLength;
+  if (MPI::COMM_WORLD.Get_rank () == 0) 
+    strLength = message.length ();
+ 
+  MPI::COMM_WORLD.Bcast (&strLength, 1, MPI::INT, 0);
+
+  const char *buf = message.c_str ();
+  MPI::COMM_WORLD.Bcast (&buf, strLength, MPI::CHAR, 0);
+  
+}
+
+
 void broadcastInteger (size_t &bInt) {
   
   // initialize variable.
@@ -378,6 +396,14 @@ void intensivePrint (string message) {
     cout << yel << message << rst << endl;
   
 }
+
+void fileSavePrint (string message) {
+
+  if (MPI::COMM_WORLD.Get_rank () == 0)
+    cout << "Saving: " << blu << message << rst << endl;
+
+}
+
 
 void error (string message) {
   

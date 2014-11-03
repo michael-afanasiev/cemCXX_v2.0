@@ -92,7 +92,8 @@ void model::allocateArrays () {
   for (size_t r=0; r<numModelRegions; r++) {
     
     size_t numParams = x[r].size ();
-    
+    cout << numParams << " HEKDFSLKJSDFL:SD" << endl;
+
     if (interpolationType != "kernel") {
       
       c11[r].resize (numParams);

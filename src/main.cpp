@@ -1,5 +1,7 @@
 #include "classes.hpp"
 
+using namespace std;
+
 int main () {
   
   MPI::Init ();
@@ -11,19 +13,21 @@ int main () {
   std::vector<std::string>::iterator fileNameIter;
   
   fileNames = getRequiredChunks (*mod);
-    
+ 
+  MPI::COMM_WORLD.Barrier ();
   for (fileNameIter=fileNames.begin (); fileNameIter!=fileNames.end(); ++fileNameIter) {
-    
+  
     exodus_file exo (*fileNameIter, mod->regionNames);    
-    mesh msh        (exo);
-    
+    mesh msh            (exo);
+    msh.initializeModel (exo);
+
     if (mod->direction == "interpolate") {
       
       msh.interpolate (*mod);
       msh.dump         (exo);      
       
     } else if (mod->direction == "extract") {
-      
+    
       msh.extract (*mod);
       
     } else if (mod->direction == "interpolate_topography") {
@@ -33,11 +37,13 @@ int main () {
       msh.dump                   (exo);
       
     }
+
   }
-  
+
   if (mod->direction == "extract")
     mod->write ();
 
-  MPI::Finalize ();
+  MPI::COMM_WORLD.Barrier ();
+  //MPI::Finalize ();
     
 }

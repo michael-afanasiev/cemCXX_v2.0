@@ -24,32 +24,63 @@ mesh::mesh (exodus_file &eFile) {
 void mesh::initializeModel (exodus_file &eFile) {
   
   getMinMaxDimensions();
-    
-  c11 = eFile.getVariable ("c11");  
-  c12 = eFile.getVariable ("c12");  
-  c13 = eFile.getVariable ("c13");  
-  c14 = eFile.getVariable ("c14");  
-  c15 = eFile.getVariable ("c15");  
-  c16 = eFile.getVariable ("c16");  
-  c22 = eFile.getVariable ("c22");  
-  c23 = eFile.getVariable ("c23");  
-  c24 = eFile.getVariable ("c24");  
-  c25 = eFile.getVariable ("c25");  
-  c26 = eFile.getVariable ("c26");  
-  c33 = eFile.getVariable ("c33");  
-  c34 = eFile.getVariable ("c34");  
-  c35 = eFile.getVariable ("c35");  
-  c36 = eFile.getVariable ("c36");  
-  c44 = eFile.getVariable ("c44");  
-  c45 = eFile.getVariable ("c45");  
-  c46 = eFile.getVariable ("c46");  
-  c55 = eFile.getVariable ("c55");  
-  c56 = eFile.getVariable ("c56");  
-  c66 = eFile.getVariable ("c66");  
-  rho = eFile.getVariable ("rho");    
-  elv = eFile.getVariable ("elv");
-  du1 = eFile.getVariable ("du1");
-  du2 = eFile.getVariable ("du2");  
+   
+//  if (myRank == 0) {
+
+    c11 = eFile.getVariable ("c11");  
+    c12 = eFile.getVariable ("c12");  
+    c13 = eFile.getVariable ("c13");  
+    c14 = eFile.getVariable ("c14");  
+    c15 = eFile.getVariable ("c15");  
+    c16 = eFile.getVariable ("c16");  
+    c22 = eFile.getVariable ("c22");  
+    c23 = eFile.getVariable ("c23");  
+    c24 = eFile.getVariable ("c24");  
+    c25 = eFile.getVariable ("c25");  
+    c26 = eFile.getVariable ("c26");  
+    c33 = eFile.getVariable ("c33");  
+    c34 = eFile.getVariable ("c34");  
+    c35 = eFile.getVariable ("c35");  
+    c36 = eFile.getVariable ("c36");  
+    c44 = eFile.getVariable ("c44");  
+    c45 = eFile.getVariable ("c45");  
+    c46 = eFile.getVariable ("c46");  
+    c55 = eFile.getVariable ("c55");  
+    c56 = eFile.getVariable ("c56");  
+    c66 = eFile.getVariable ("c66");  
+    rho = eFile.getVariable ("rho");    
+    elv = eFile.getVariable ("elv");
+    du1 = eFile.getVariable ("du1");
+    du2 = eFile.getVariable ("du2"); 
+
+ // }
+
+  intensivePrint ("Broadcasting mesh vectors.");
+//  broadcast1DVector (c11);
+//  broadcast1DVector (c12);
+//  broadcast1DVector (c13);
+//  broadcast1DVector (c14);
+//  broadcast1DVector (c15);
+//  broadcast1DVector (c16);
+//  broadcast1DVector (c22);
+//  broadcast1DVector (c23);
+//  broadcast1DVector (c24);
+//  broadcast1DVector (c25);
+//  broadcast1DVector (c26);
+//  broadcast1DVector (c33);
+//  broadcast1DVector (c34);
+//  broadcast1DVector (c35);
+//  broadcast1DVector (c36);
+//  broadcast1DVector (c44);
+//  broadcast1DVector (c45);
+//  broadcast1DVector (c46);
+//  broadcast1DVector (c55);
+//  broadcast1DVector (c56);
+//  broadcast1DVector (c66);
+//  broadcast1DVector (rho);
+//  broadcast1DVector (elv);
+//  broadcast1DVector (du1);
+//  broadcast1DVector (du2);
   
   getSideSets ();
     
@@ -93,8 +124,9 @@ void mesh::interpolate (model &mod) {
   
   intensivePrint ("Interpolating.");
   size_t setSize = interpolatingSet.size ();
-  int percent = (setSize / omp_get_max_threads ()) / 100.;
-    
+//  int percent = (setSize / omp_get_max_threads ()) / 100.;
+  int percent = setSize / 100.;
+
   int pCount = 0;
   int pIter  = 0;
   
@@ -154,13 +186,13 @@ void mesh::interpolate (model &mod) {
       
     }
     
-    if (omp_get_thread_num () == 0) {
+//    if (omp_get_thread_num () == 0) {
       pCount++;
       if (pCount % percent == 0) {
         cout << pIter << " %\r" << flush;
         pIter++;
       }
-    }
+//    }
          
   }
   
@@ -241,13 +273,13 @@ void mesh::interpolateAndSmooth (model &mod) {
                         
     }
         
-    if (omp_get_thread_num () == 0) {
+//    if (omp_get_thread_num () == 0) {
       pCount++;
       if (pCount % percent == 0) {
         cout << pIter << " %\r" << flush;
         pIter++;
       }
-    }
+//    }
          
   }
   
@@ -360,7 +392,7 @@ void mesh::createKDTree () {
 }
 
 void mesh::extract (model &mod) {
-  
+ 
   createKDTree ();
   
   intensivePrint ("Extracting.");
@@ -373,7 +405,7 @@ void mesh::extract (model &mod) {
   
   // Loop over model regions.  
   for (size_t r=0; r<mod.numModelRegions; r++) {
-    
+
     if (mod.maxRadRegion[r] <= radMin || mod.minRadRegion[r] >= radMax)
       continue;
        
@@ -404,12 +436,11 @@ void mesh::extract (model &mod) {
           
           // Get the set of nearest points to target point, with a dynamically set searchRadius.
           kdres *set = kd_nearest_range3 (tree, xTarget, yTarget, zTarget, searchRadius);
-          
 
           // Initialize node and iterator numbers.
           size_t n0=0, n1=0, n2=0, n3=0;
           size_t i0=0, i1=0, i2=0, i3=0;
-          
+
           // While we're not past the end of the set of nearest neighbours, and while we haven't
           // actually found the tet we're looking for.
           while (kd_res_end (set) == 0 && not found) {
@@ -433,7 +464,6 @@ void mesh::extract (model &mod) {
               n2 = connectivity[i2] - 1;
               n3 = connectivity[i3] - 1;
     
-                                                
               // Set up our four vectors which define the edge of the tet.
               std::vector<double> v0 = returnVector (x[n0], y[n0], z[n0]);
               std::vector<double> v1 = returnVector (x[n1], y[n1], z[n1]);
@@ -457,7 +487,7 @@ void mesh::extract (model &mod) {
               if (found == true) {
 
                 if (mod.interpolationType != "kernel") {
-                  
+
                   mod.c11[r][i] = interpolateTet (c11, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c12[r][i] = interpolateTet (c12, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c13[r][i] = interpolateTet (c13, n0, n1, n2, n3, l0, l1, l2, l3); 
@@ -505,11 +535,11 @@ void mesh::extract (model &mod) {
           if (not found)
             searchRadius = searchRadius + searchRadius * TEN_PERCENT;     
 
-          if (searchRadius > 100) {
+          if (searchRadius > 10000) {
             cout << searchRadius << endl;
             double col, lon, rad;
             xyz2ColLonRad (xTarget, yTarget, zTarget, col, lon, rad);
-            cout << rad2Deg(col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
+            cout << rad2Deg(col) << ' ' << rad2Deg(lon) << ' ' << rad << ' ' << r << endl;
             cout << myRank << endl;
           }
 
@@ -528,7 +558,8 @@ void mesh::extract (model &mod) {
           cout << pIter << " %\r" << flush;
           pIter++;
         }
-      }                  
+      }
+
     }        
   }
   
@@ -548,9 +579,19 @@ void mesh::getSideSets () {
   for (size_t i=0; i<connectivitySize; i++) {
     
     size_t posIter = connectivity[i] - 1;
-    
-    double radius = getRadius (x[posIter], y[posIter], z[posIter]);
+   
+    double col, lon, radius;
+    xyz2ColLonRad (x[posIter], y[posIter], z[posIter], col, lon, radius);
     if ((abs (radius-radMax) < 0.5) || (abs (radius-radMin) < 0.5))
+      onSideSet[i] = true;
+
+    if (abs (rad2Deg (lon)) < 0.1)
+      onSideSet[i] = true;
+
+    if (abs (rad2Deg (lon) - 90.) < 0.1)
+      onSideSet[i] = true;
+
+    if (abs (rad2Deg (lon) - 180.) < 0.1)
       onSideSet[i] = true;
     
   }
@@ -592,19 +633,21 @@ void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
   // project the point down (or up) so that it lies within the plane of the closest tet face. 
   // Tiny is necessary here to deal with small floating point errors.
   // Current settings: tiny (0.01), close (1).
-  if        (pRadius > dist && (abs (pRadius-radMax) < CLOSE)) {
+  if        (pRadius > dist && (abs (pRadius-radMax) < CLOSE) && (abs (dist - radMax) < CLOSE)) {
 
     double dif = abs (radMax - dist);
     p0[0] = p0[0] + (n0[0]) * (dif + TINY);
     p0[1] = p0[1] + (n0[1]) * (dif + TINY);
     p0[2] = p0[2] + (n0[2]) * (dif + TINY);
 
-  } else if ((pRadius < dist) &&  (abs (pRadius-radMin) < CLOSE)) {
-
-    double dif = abs (radMin - dist);
-    p0[0] = p0[0] + n0[0] * (dif + TINY) * (-1);
-    p0[1] = p0[1] + n0[1] * (dif + TINY) * (-1);
-    p0[2] = p0[2] + n0[2] * (dif + TINY) * (-1);
+//  } else if ((pRadius < dist) &&  (abs (pRadius-radMin) < CLOSE)) {
+//
+//    double dif = abs (radMin - dist);
+//    cout << "BEFORE " << dif << ' ' << pRadius << endl;
+//    p0[0] = p0[0] + n0[0] * (dif + TINY) * (-1);
+//    p0[1] = p0[1] + n0[1] * (dif + TINY) * (-1);
+//    p0[2] = p0[2] + n0[2] * (dif + TINY) * (-1);
+//    cout << "AFTER " << dif << ' ' << pRadius << endl;
     
   }
            
@@ -919,7 +962,7 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
 }   
 
 void mesh::getMinMaxDimensions () {
-  
+
   size_t found;
   found = eFileName.find ("col000-090");
   if (found != string::npos) {
@@ -974,7 +1017,7 @@ void mesh::getMinMaxDimensions () {
 bool mesh::checkBoundingBox (double &x, double &y, double &z) {
   
   double rad = getRadius (x, y, z);
-  
+
   if (x   <= xMax   && x   >= xMin &&
       y   <= yMax   && y   >= yMin &&
       z   <= zMax   && z   >= zMin &&
