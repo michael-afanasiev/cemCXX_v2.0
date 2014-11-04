@@ -16,11 +16,8 @@ int main () {
   msh.initializeKernel      (exo);
   msh.interpolateAndSmooth (*mod);
 
-  if (MPI::COMM_WORLD.Get_rank () == 0) {
-    exo.putVarParams ();
-    exo.putVarNames ();
-  }
-  msh.dumpKernel (exo);
+  if (MPI::COMM_WORLD.Get_rank () == 0)
+    exo.writeNew ("./test.ex2", msh, msh.krn);
 
   msh.extract (*mod);
   mod->write ();

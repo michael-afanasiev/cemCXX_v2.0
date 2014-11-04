@@ -416,6 +416,24 @@ void intensivePrint (string message) {
   
 }
 
+void donePrint () {
+  
+  cout << grn << "Done." << rst << endl;
+  
+}
+    
+
+void percentagePrint (int &percent, int &pCount, int &pIter) {
+
+#pragma omp critical
+  pCount++;
+  if (pCount % percent == 0) {
+    cout << pIter << " %\r" << flush;
+    pIter++;    
+  }
+  
+}
+
 void fileSavePrint (string message) {
 
   if (MPI::COMM_WORLD.Get_rank () == 0)

@@ -43,9 +43,12 @@ const std::string mgn = "\x1b[35m";
 const std::string blu = "\x1b[36m";
 
 // Message helper functions.
+void donePrint         ();
+void percentagePrint   (int &, int &, int &);
 void error             (std::string);
 void intensivePrint    (std::string);
 void fileSavePrint     (std::string);
+
 
 // MPI helper functions.
 void broadcast2DVector (std::vector<std::vector<double>>&);
@@ -116,6 +119,9 @@ protected:
   
   // Cartesian co-ordinate data.
   std::vector<std::vector<double>> x, y, z;
+  
+  // Original mesh size.
+  size_t originalSize;
     
   // Elastic moduli.
   std::vector<std::vector<double>> c11, c12, c13, c14, c15, c16;
@@ -128,10 +134,6 @@ protected:
   
   // density.
   vector<vector<double>> rho;
-
-  // subset parameters.
-  vector<vector<double>> vsv, vsh, vpv, vph;    
-  vector<vector<double>> vsi, vpi;  
   
   // optional smoother array.
   vector<vector<double>> smooth;
@@ -173,6 +175,10 @@ protected:
   bool checkBoundingBox (double &x, double &y, double &z);
   
 public:
+
+  // subset parameters.
+  vector<vector<double>> vsv, vsh, vpv, vph;    
+  vector<vector<double>> vsi, vpi;  
   
 
   virtual void read  (void) =0;
@@ -261,9 +267,7 @@ public:
   void interpolate           (model &);
   void interpolateTopography (discontinuity &);
   void interpolateAndSmooth  (model &);
-
-protected:
-  
+    
   int myRank, worldSize;
   
   // co-ordinates.
@@ -330,6 +334,7 @@ protected:
   bool checkInterpolatingRegion (double &x, double &y, double &z, double minRad, double maxRad);
   void getSideSets ();
   void buildConnectivityList ();
+  void printExplodingSearchRad (double &, double &, double &, double &);
   
   void checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
                         std::vector<double> &v2, std::vector<double> &p0);
@@ -456,9 +461,10 @@ public:
   // Constructor.
   exodus_file   (std::string, std::vector<std::string>);
   ~exodus_file  ();
+  void writeNew         (std::string fileName, mesh &msh, std::vector<double> &par);
   
-  void putVarParams     ();
-  void putVarNames ();
+  void putVarParams     (int &);
+  void putVarNames (int &);
   void printMeshInfo  ();
   
 };

@@ -44,7 +44,7 @@ void specfem3d_globe::adjustRegions () {
       if (r == 0) {
 
         if (radLoc < RAD_CMB) 
-          radLoc = RAD_CMB + TINY;
+          radLoc = RAD_CMB + 10;
         
         if (radLoc > R_EARTH)
           radLoc = R_EARTH - TINY;
@@ -116,15 +116,6 @@ void specfem3d_globe::write () {
   } else {
 
     construct ();
-
-    for (size_t r=0; r<numModelRegions; r++) {
-      for (size_t i=0; i<x[r].size (); i++) {
-
-        //if (rho[r][i] == 0) {
-        //  cout << getRadius (x[r][i], y[r][i], z[r][i]) << endl;
-        //}
-      }
-    }
 
     stringstream myRankStringStream;
     myRankStringStream << std::setw(6) << std::setfill ('0') << myRank;

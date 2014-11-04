@@ -9,8 +9,6 @@ mesh::mesh (exodus_file &eFile) {
   
   eFileName = eFile.returnName ();
   eFile.getXYZ (x, y, z);
-  
-  cout << "HERE MY NAME IS " << myRank << endl;
 
   connectivity     = eFile.returnConnectivity ();
   nodeNumMap       = eFile.returnNodeNumMap   ();
@@ -23,64 +21,33 @@ mesh::mesh (exodus_file &eFile) {
 void mesh::initializeModel (exodus_file &eFile) {
   
   getMinMaxDimensions();
-   
-//  if (myRank == 0) {
 
-    c11 = eFile.getVariable ("c11");  
-    c12 = eFile.getVariable ("c12");  
-    c13 = eFile.getVariable ("c13");  
-    c14 = eFile.getVariable ("c14");  
-    c15 = eFile.getVariable ("c15");  
-    c16 = eFile.getVariable ("c16");  
-    c22 = eFile.getVariable ("c22");  
-    c23 = eFile.getVariable ("c23");  
-    c24 = eFile.getVariable ("c24");  
-    c25 = eFile.getVariable ("c25");  
-    c26 = eFile.getVariable ("c26");  
-    c33 = eFile.getVariable ("c33");  
-    c34 = eFile.getVariable ("c34");  
-    c35 = eFile.getVariable ("c35");  
-    c36 = eFile.getVariable ("c36");  
-    c44 = eFile.getVariable ("c44");  
-    c45 = eFile.getVariable ("c45");  
-    c46 = eFile.getVariable ("c46");  
-    c55 = eFile.getVariable ("c55");  
-    c56 = eFile.getVariable ("c56");  
-    c66 = eFile.getVariable ("c66");  
-    rho = eFile.getVariable ("rho");    
-    elv = eFile.getVariable ("elv");
-    du1 = eFile.getVariable ("du1");
-    du2 = eFile.getVariable ("du2"); 
+  c11 = eFile.getVariable ("c11");  
+  c12 = eFile.getVariable ("c12");  
+  c13 = eFile.getVariable ("c13");  
+  c14 = eFile.getVariable ("c14");  
+  c15 = eFile.getVariable ("c15");  
+  c16 = eFile.getVariable ("c16");  
+  c22 = eFile.getVariable ("c22");  
+  c23 = eFile.getVariable ("c23");  
+  c24 = eFile.getVariable ("c24");  
+  c25 = eFile.getVariable ("c25");  
+  c26 = eFile.getVariable ("c26");  
+  c33 = eFile.getVariable ("c33");  
+  c34 = eFile.getVariable ("c34");  
+  c35 = eFile.getVariable ("c35");  
+  c36 = eFile.getVariable ("c36");  
+  c44 = eFile.getVariable ("c44");  
+  c45 = eFile.getVariable ("c45");  
+  c46 = eFile.getVariable ("c46");  
+  c55 = eFile.getVariable ("c55");  
+  c56 = eFile.getVariable ("c56");  
+  c66 = eFile.getVariable ("c66");  
+  rho = eFile.getVariable ("rho");    
+  elv = eFile.getVariable ("elv");
+  du1 = eFile.getVariable ("du1");
+  du2 = eFile.getVariable ("du2"); 
 
- // }
-
-  intensivePrint ("Broadcasting mesh vectors.");
-//  broadcast1DVector (c11);
-//  broadcast1DVector (c12);
-//  broadcast1DVector (c13);
-//  broadcast1DVector (c14);
-//  broadcast1DVector (c15);
-//  broadcast1DVector (c16);
-//  broadcast1DVector (c22);
-//  broadcast1DVector (c23);
-//  broadcast1DVector (c24);
-//  broadcast1DVector (c25);
-//  broadcast1DVector (c26);
-//  broadcast1DVector (c33);
-//  broadcast1DVector (c34);
-//  broadcast1DVector (c35);
-//  broadcast1DVector (c36);
-//  broadcast1DVector (c44);
-//  broadcast1DVector (c45);
-//  broadcast1DVector (c46);
-//  broadcast1DVector (c55);
-//  broadcast1DVector (c56);
-//  broadcast1DVector (c66);
-//  broadcast1DVector (rho);
-//  broadcast1DVector (elv);
-//  broadcast1DVector (du1);
-//  broadcast1DVector (du2);
-  
   getSideSets ();
     
 }
@@ -89,6 +56,8 @@ void mesh::initializeKernel (exodus_file &eFile) {
   
   du1.resize (numNodes);
   krn.resize (numNodes);
+  
+  std::fill (du1.begin (), du1.end (), 0);
   
   radMin = 3480.;
   radMax = 6371.;
@@ -122,12 +91,16 @@ void mesh::buildConnectivityList () {
 void mesh::interpolate (model &mod) {
   
   intensivePrint ("Interpolating.");
+  
   size_t setSize = interpolatingSet.size ();
-//  int percent = (setSize / omp_get_max_threads ()) / 100.;
-  int percent = setSize / 100.;
-
-  int pCount = 0;
-  int pIter  = 0;
+  int percent    = setSize / 100.;
+  int pCount     = 0;
+  int pIter      = 0;
+  
+  // Supress unused variable warnings.
+  (void) pCount;
+  (void) pIter;
+  (void) percent;  
   
 #pragma omp parallel for firstprivate (pCount, pIter)
   for (size_t i=0; i<setSize; i++) {
@@ -183,19 +156,15 @@ void mesh::interpolate (model &mod) {
         
       }
       
-    }
+    }    
     
-//    if (omp_get_thread_num () == 0) {
-      pCount++;
-      if (pCount % percent == 0) {
-        cout << pIter << " %\r" << flush;
-        pIter++;
-      }
-//    }
-         
+    #ifdef VERBOSE
+    percentagePrint (percent, pCount, pIter);
+    #endif
+
   }
   
-  cout << grn << "Done." << rst << endl;
+  donePrint ();
   
 }
 
@@ -203,35 +172,30 @@ void mesh::interpolateAndSmooth (model &mod) {
     
   intensivePrint ("Interpolating.");
   size_t setSize = interpolatingSet.size ();
-  int percent = (setSize) / 100.;
+  int percent    = (setSize) / 100.;
   
   struct {
     double distance;
     int    rank;
   } distanceIn[numNodes], distanceOut[numNodes];
     
-  int pCount       = 0;
-  int pIter        = 0;  
-  double searchRad = 100;  
-  double *bufValue = new double [setSize];
+  int pCount          = 0;
+  int pIter           = 0;  
+  double searchRad    = 100;  
+  double *bufValue    = new double [setSize];
   double *interpParam = new double [setSize]();
+  
+  // Supress unused variable warnings.
+  (void) pCount;
+  (void) pIter;
+  (void) percent;
+  
   for (size_t i=0; i<setSize; i++) {
 
     // extract node number.
     size_t nodeNum = interpolatingSet[i] - 1;        
-   
-    if (not (mod.checkBoundingBox (x[nodeNum], y[nodeNum], z[nodeNum]))) {
-      // cout << "OUT " << myRank << " " << nodeNum << endl;
-      continue;
-    } else { 
-      
-      // if (nodeNum == 0)
-      cout << " IN " << myRank << " " << nodeNum << endl;
-    
-    }
-      
-   
-    // use du2 as a scratch array to avoid doubly visiting points.
+
+    // use du1 as a scratch array to avoid doubly visiting points.
     if (du1[nodeNum] == 1)
       continue;
          
@@ -242,6 +206,22 @@ void mesh::interpolateAndSmooth (model &mod) {
       double minDist               = 1e10;     
       distanceIn[nodeNum].distance = minDist; 
       distanceIn[nodeNum].rank     = myRank;
+      
+      kdres *test  = kd_nearest3 (mod.trees[r], x[nodeNum], y[nodeNum], z[nodeNum]);
+      void *ind    = kd_res_item_data (test);
+      size_t point = * (int *) ind;
+      
+      if (point >= mod.originalSize) {
+        
+        distanceIn[nodeNum].distance = 1e10;
+        distanceIn[nodeNum].rank     = myRank;
+        interpParam[nodeNum]         = mod.vsh[r][point];
+        kd_res_free (test);
+        continue;
+          
+      }
+      
+      kd_res_free (test);
       
       // find all points within some radius.
       kdres *set = kd_nearest_range3 (mod.trees[r], x[nodeNum], y[nodeNum], z[nodeNum], searchRad);
@@ -272,28 +252,26 @@ void mesh::interpolateAndSmooth (model &mod) {
         // mark that we've visited here.
         du1[nodeNum] = 1;
         
+        // advance set.
         kd_res_next (set);
+        
       }
     
-      int kdSetSize = kd_res_size (set);
-      if (kdSetSize != 0) {
-        interpParam[nodeNum] = interpParam[nodeNum] / kdSetSize;
+      // Find average of values, and deallocate the array.
+      if (kd_res_size (set) != 0) {
+        interpParam[nodeNum] = interpParam[nodeNum] / kd_res_size (set);
         kd_res_free (set);
       }
                         
     }
-        
-//    if (omp_get_thread_num () == 0) {
-      pCount++;
-      if (pCount % percent == 0) {
-        cout << pIter << " %\r" << flush;
-        pIter++;
-      }
-//    }
-         
+       
+    #ifdef VERBOSE 
+    percentagePrint (percent, pCount, pIter);
+    #endif
+    
   }
   
-  cout << grn << "Done." << rst << endl;
+  donePrint ();
   
   // Figure out where the minimum distance is.
   MPI::COMM_WORLD.Allreduce (distanceIn, distanceOut, setSize, MPI_DOUBLE_INT, MPI_MINLOC);  
@@ -313,6 +291,24 @@ void mesh::interpolateAndSmooth (model &mod) {
   }
   
   std::copy (bufValue, bufValue+setSize, krn.begin ());  
+  
+  // intensivePrint ("Averaging.");
+  // size_t connectivitySize = connectivity.size ();
+  // for (size_t i=0; i<connectivitySize; i+=4) {
+  //
+  //   double val0 = krn[connectivity[i+0] - 1];
+  //   double val1 = krn[connectivity[i+1] - 1];
+  //   double val2 = krn[connectivity[i+2] - 1];
+  //   double val3 = krn[connectivity[i+3] - 1];
+  //
+  //   double avg = (val0 + val1 + val2 + val3) / 4.;
+  //
+  //   krn[connectivity[i+0] - 1] = avg;
+  //   krn[connectivity[i+1] - 1] = avg;
+  //   krn[connectivity[i+2] - 1] = avg;
+  //   krn[connectivity[i+3] - 1] = avg;
+  //
+  // }
   
 }
 
@@ -403,15 +399,13 @@ void mesh::createKDTree () {
 
 void mesh::extract (model &mod) {
  
-  createKDTree ();
-  
+  createKDTree   ();  
   intensivePrint ("Extracting.");
   
   // Parameters for search radius balloon.
   double searchRadius      = 1.;
   const double ONE_PERCENT = 0.01;
   const double TEN_PERCENT = 0.10;
-  int totalLoops           = 0;
   
   // Loop over model regions.  
   for (size_t r=0; r<mod.numModelRegions; r++) {
@@ -422,9 +416,14 @@ void mesh::extract (model &mod) {
     size_t numParams = mod.x[r].size ();
     
     // Initialize percentage reporting.
-    int percent      = (numParams) / 100.;
-    int pIter        = 0;    
-
+    int percent = (numParams) / 100.;
+    int pIter   = 0;    
+    int pCount  = 0;
+    
+    // Supress unused variable warnings.
+    (void) pCount;
+    (void) pIter;
+    (void) percent;          
 
 #pragma omp parallel for firstprivate (searchRadius, r) schedule (guided)
     for (size_t i=0; i<numParams; i++) {
@@ -528,8 +527,7 @@ void mesh::extract (model &mod) {
                 }
 
                 // Keep the search radius tight, and break out of loop.
-                searchRadius = searchRadius - searchRadius * ONE_PERCENT;
-                
+                searchRadius = searchRadius - searchRadius * ONE_PERCENT;                
                 break;               
               
               }            
@@ -545,13 +543,8 @@ void mesh::extract (model &mod) {
           if (not found)
             searchRadius = searchRadius + searchRadius * TEN_PERCENT;     
 
-          if (searchRadius > 10000) {
-            cout << searchRadius << endl;
-            double col, lon, rad;
-            xyz2ColLonRad (xTarget, yTarget, zTarget, col, lon, rad);
-            cout << rad2Deg(col) << ' ' << rad2Deg(lon) << ' ' << rad << ' ' << r << endl;
-            cout << myRank << endl;
-          }
+          printExplodingSearchRad (searchRadius, xTarget, yTarget, zTarget);
+
 
           // If we actually have a results set, let's free the memory needed for the next pass.
           if (kd_res_size (set) != 0)
@@ -560,21 +553,27 @@ void mesh::extract (model &mod) {
         }                        
       }
       
-      // Percent reporting TODO move this to a function.      
-#pragma omp critical
-      {
-        totalLoops++;      
-        if (totalLoops % percent == 0) {
-          cout << pIter << " %\r" << flush;
-          pIter++;
-        }
-      }
+      #ifdef VERBOSE
+      percentagePrint (percent, pCount, pIter);
+      #endif
 
     }        
   }
   
-  cout << grn << "Done." << rst << endl;
+  donePrint ();
     
+}
+
+void mesh::printExplodingSearchRad (double &searchRadius, double &xT, double &yT, double &zT) {
+  
+  if (searchRadius > 10000) {
+    cout << searchRadius << endl;
+    double col, lon, rad;
+    xyz2ColLonRad (xT, yT, zT, col, lon, rad);
+    cout << rad2Deg(col) << ' ' << rad2Deg(lon) << ' ' << rad << endl;
+    cout << myRank << endl;
+  }
+  
 }
 
 void mesh::getSideSets () {
@@ -743,8 +742,8 @@ void mesh::interpolateTopography (discontinuity &topo) {
     }    
   }
     
-  cout << grn << "Done." << rst << endl;
-      
+  donePrint ();
+        
 }
 
 double mesh::returnUpdate (vector<vector<double>> &vec, double &valMsh, 

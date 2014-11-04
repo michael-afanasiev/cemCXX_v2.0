@@ -4,6 +4,10 @@ using namespace std;
 
 void model::findChunkCenters () {
   
+/*
+  Finds the center of model chunks.
+*/
+  
   vector<double> ctr (3, 0);
   xCtr.resize (worldSize);
   yCtr.resize (worldSize);
@@ -34,6 +38,15 @@ void model::findChunkCenters () {
 
 void model::findNeighbouringChunks () {
   
+/*
+  Finds neighbouring model chunks (for MPI). This assumes that the centers have already been
+  calculated (using findChunkCenters ()). Use largeDistance to trick the algorithm against
+  trying to call itself a neighbour.
+*/
+  
+  size_t maxNeighbours = 8;
+  size_t largeDistance = 1e10;
+  
   sum1DVector (xCtr);
   sum1DVector (yCtr);
   sum1DVector (zCtr);
@@ -48,16 +61,16 @@ void model::findNeighbouringChunks () {
     if (getRadius (xDist, yDist, zDist) != 0) {
       distArray[i] = getRadius (xDist, yDist, zDist);                
     } else {
-      distArray[i] = 1e10;
+      distArray[i] = largeDistance;
     }
     
   }
   
-  while (neighbourArray.size () < 8) {
+  while (neighbourArray.size () < maxNeighbours) {
     
     size_t ind = getSmallestIndex (distArray);
     neighbourArray.push_back (ind);
-    distArray[ind] = 1e10;
+    distArray[ind] = largeDistance;
     
     if (neighbourArray.size () == (worldSize - 1))
       break;
@@ -71,7 +84,7 @@ void model::findNeighbouringChunks () {
 void model::broadcastNeighbouringChunks () {
   
 /*
-  Function to broadcast all neighbouring chunk arrays.
+  Function to broadcast all neighbouring chunk arrays, and append to initial model.
 */
 
   // Definitions.
@@ -81,6 +94,7 @@ void model::broadcastNeighbouringChunks () {
   int Y_TAG            = 1;
   int Z_TAG            = 2;
   int KRN_TAG          = 3;
+  originalSize         = numBroadcast;
   
   // Allocations.
   double *recX   = new double [numBroadcast];
@@ -100,14 +114,10 @@ void model::broadcastNeighbouringChunks () {
   
   for (size_t i=0; i<numNeighbours; i++) {
     
-    cout << myRank << ' ' << neighbourArray[i] << endl;
-    
     MPI::COMM_WORLD.Recv (recX,   numBroadcast, MPI::DOUBLE, neighbourArray[i], X_TAG);
     MPI::COMM_WORLD.Recv (recY,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Y_TAG);
     MPI::COMM_WORLD.Recv (recZ,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Z_TAG);
     MPI::COMM_WORLD.Recv (recKrn, numBroadcast, MPI::DOUBLE, neighbourArray[i], KRN_TAG);
-    
-    cout << recX[0] << ' ' << myRank << ' ' << numNeighbours << endl;
 
     x[0].insert   (x[0].end (),   recX,   recX+numBroadcast);
     y[0].insert   (y[0].end (),   recY,   recY+numBroadcast);
@@ -122,8 +132,6 @@ void model::broadcastNeighbouringChunks () {
   delete [] recY;
   delete [] recZ;
   delete [] recKrn;
-  
-  cout << "BROADCASTED: " << myRank << endl;
   
 }
 
@@ -217,7 +225,6 @@ void model::allocateArrays () {
   for (size_t r=0; r<numModelRegions; r++) {
     
     size_t numParams = x[r].size ();
-    cout << numParams << " HEKDFSLKJSDFL:SD" << endl;
 
     if (interpolationType != "kernel") {
       

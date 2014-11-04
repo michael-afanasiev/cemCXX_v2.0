@@ -56,6 +56,40 @@ void exodus_file::openFileWrite () {
     
 }
 
+void exodus_file::writeNew (std::string fileName, mesh &msh, std::vector<double> &par) {
+  
+  int nDim       = 3;
+  int numNodeSet = 0;
+  int numSideSet = 0;
+  
+  int idNew = ex_create (fileName.c_str (), EX_CLOBBER, &comp_ws, &io_ws);
+  if (idNew < 0) {
+    std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
+      << std::flush << std::endl;
+    exit (EXIT_FAILURE);
+  }
+  
+  exodusCheck (ex_put_init (idNew, "Kernel", nDim, numNodes, numElem, numElemBlock, numNodeSet, 
+    numSideSet), "ex_put_init");
+    
+  exodusCheck (ex_put_coord (idNew, msh.x.data (), msh.y.data (), msh.z.data ()), "ex_put_coord");
+  
+  exodusCheck (ex_put_elem_block (idNew, 1, "TETRA", numElem, numNodePerElem, 0), 
+    "ex_put_elem_block");
+    
+  exodusCheck (ex_put_node_num_map (idNew, nodeNumMap.data ()), "ex_put_node_num_map");
+  
+  exodusCheck (ex_put_elem_conn (idNew, 1, connectivity.data ()), "ex_put_elem_conn");
+  
+  putVarParams (idNew);
+  putVarNames  (idNew);
+  
+  exodusCheck (ex_put_nodal_var (idNew, 1, 1, numNodes, par.data ()), "ex_put_nodal_var");
+  exodusCheck (ex_close (idNew), "ex_close");
+  
+  
+}
+
 void exodus_file::openFile () {
   
   // Opens an exodus file, populates the idexo field, gathers basic information, and allocates
@@ -71,17 +105,17 @@ void exodus_file::openFile () {
     
 }
 
-void exodus_file::putVarParams () {
+void exodus_file::putVarParams (int &idNew) {
   
-  exodusCheck (ex_put_var_param (idexo, "n", 1), "ex_put_var_param");
+  exodusCheck (ex_put_var_param (idNew, "n", 1), "ex_put_var_param");
   
 }
 
-void exodus_file::putVarNames () {
+void exodus_file::putVarNames (int &idNew) {
   
   const char *varNames[1];
   varNames[0] = "krn";
-  exodusCheck (ex_put_var_names (idexo, "n", 1, const_cast<char**> (varNames)), "ex_put_var_names");
+  exodusCheck (ex_put_var_names (idNew, "n", 1, const_cast<char**> (varNames)), "ex_put_var_names");
   
 }
 
@@ -183,10 +217,12 @@ void exodus_file::printMeshInfo () {
   
   // Print mesh info.
 
+  #ifdef VERBOSE
   std::cout << mgn << "Number of elements:\t\t" << numElem << std::flush << std::endl;
   std::cout << "Number of nodes:\t\t" << numNodes << std::flush << std::endl;
   std::cout << "Number of element blocks:\t" << numElemBlock << rst << "\n" 
     << std::flush << std::endl;
+  #endif
   
 }
 
