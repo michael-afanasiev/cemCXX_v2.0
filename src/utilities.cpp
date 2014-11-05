@@ -183,6 +183,10 @@ double interpolateTet (std::vector<double> &vec, size_t &n0,  size_t &n1, size_t
 void xyz2ColLonRad (double &x, double &y, double &z, double &col, double &lon, double &rad) {
 
   rad = getRadius (x, y, z);
+  
+  if (rad == 0)
+    rad = TINY;
+
   col = acos (z / rad);
   lon = atan2 (y, x);
 
@@ -410,28 +414,35 @@ double getRadius (double &x, double &y, double &z) {
 
 // Messages.
 void intensivePrint (string message) {
-  
+ 
+#ifdef VERBOSE
   if (MPI::COMM_WORLD.Get_rank () == 0)
     cout << yel << message << rst << endl;
-  
+#endif
+
 }
 
 void donePrint () {
-  
+ 
+#ifdef VERBOSE
   cout << grn << "Done." << rst << endl;
-  
+#endif
+
 }
     
 
 void percentagePrint (int &percent, int &pCount, int &pIter) {
 
+#ifdef VERBOSE
 #pragma omp critical
   pCount++;
   if (pCount % percent == 0) {
     cout << pIter << " %\r" << flush;
     pIter++;    
   }
-  
+
+#endif
+
 }
 
 void fileSavePrint (string message) {

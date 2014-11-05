@@ -22,11 +22,11 @@ specfem3d_globe::specfem3d_globe () {
   read                        ();
   adjustRegions               ();
   findMinMaxRadius            ();
-  findMinMaxCartesian         ();
-  findChunkCenters            ();
-  findNeighbouringChunks      ();
-  broadcastNeighbouringChunks ();
-  createKDtree                ();
+//  findMinMaxCartesian         ();
+//  findChunkCenters            ();
+//  findNeighbouringChunks      ();
+//  broadcastNeighbouringChunks ();
+//  createKDtree                ();
   allocateArrays              ();
   
 }
@@ -43,18 +43,18 @@ void specfem3d_globe::adjustRegions () {
       
       if (r == 0) {
 
-        if (radLoc < RAD_CMB) 
-          radLoc = RAD_CMB + 10;
+        if (radLoc <= RAD_CMB) 
+          radLoc = RAD_CMB + TINY;
         
         if (radLoc > R_EARTH)
           radLoc = R_EARTH - TINY;
 
       } else if (r == 1) {
 
-        if (radLoc > RAD_CMB)
+        if (radLoc >= RAD_CMB)
           radLoc = RAD_CMB - TINY;
 
-        if (radLoc < RAD_ICB)
+        if (radLoc <= RAD_ICB)
           radLoc = RAD_ICB + TINY;
 
       } else if (r == 2) {
@@ -62,6 +62,9 @@ void specfem3d_globe::adjustRegions () {
         if (radLoc > 1115) 
           radLoc = 1115 - TINY;
 
+        if (radLoc < 5) {
+          radLoc = 5 + TINY;
+        }
       }
 
       if (colLoc == 0.)
@@ -120,6 +123,18 @@ void specfem3d_globe::write () {
     stringstream myRankStringStream;
     myRankStringStream << std::setw(6) << std::setfill ('0') << myRank;
     string myRankString = myRankStringStream.str ();
+
+    for (size_t r=0; r<numModelRegions; r++) {
+      for (size_t i=0; i<rho[r].size (); i++) {
+
+        if (rho[r][i] == 0) {
+
+          cout << "X Y Z: " << x[r][i] << ' ' << y[r][i] << ' ' << z[r][i] << endl;
+          cout << "RHO IS ZERO AT: " << getRadius (x[r][i], y[r][i], z[r][i]);
+
+        }
+      }
+    }
 
     writeParamNetcdfSerial (vph[0], "vph_reg01.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vpv[0], "vpv_reg01.proc" + myRankString + ".nc");
@@ -430,15 +445,22 @@ void specfem3d_globe::readCoordNetcdf (std::string fileName) {
   if (fileName.find ("reg01") != string::npos) {
     maxRadRegion.push_back (R_EARTH);
     minRadRegion.push_back (RAD_CMB);
+
+#ifdef VERBOSE
     cout << "DONE reg01 " << myRank << endl;
+#endif
   } else if (fileName.find ("reg02") != string::npos) {
     maxRadRegion.push_back (RAD_CMB);
     minRadRegion.push_back (RAD_ICB);
+#ifdef VERBOSE
     cout << "DONE reg02 " << myRank << endl;
+#endif
   } else if (fileName.find ("reg03") != string::npos) {
     maxRadRegion.push_back (RAD_ICB);
     minRadRegion.push_back (0.);
+#ifdef VERBOSE
     cout << "DONE reg03 " << myRank << endl;
+#endif
   }
 
 }

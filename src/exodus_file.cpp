@@ -45,8 +45,10 @@ void exodus_file::openFileWrite () {
   
   // Opens an exodus file, populates the idexo field, gathers basic information, and allocates
   // the appropriate arrays.
-  
+ 
+#ifdef VERBOSE
   std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
+#endif
   idexo = ex_open (fileName.c_str(), EX_WRITE, &comp_ws, &io_ws, &vers);
   if (idexo < 0) {
     std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
@@ -95,7 +97,9 @@ void exodus_file::openFile () {
   // Opens an exodus file, populates the idexo field, gathers basic information, and allocates
   // the appropriate arrays.
   
+#ifdef VERBOSE
   std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
+#endif
   idexo = ex_open (fileName.c_str(), EX_READ, &comp_ws, &io_ws, &vers);
   if (idexo < 0) {
     std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
@@ -209,7 +213,10 @@ void exodus_file::closeFile () {
   // Closes the exodus file.
   
   exodusCheck (ex_close (idexo), "ex_close");
+
+#ifdef VERBOSE
   std::cout << "File closed succesfully." << std::flush << std::endl;
+#endif
   
 }
 

@@ -15,6 +15,10 @@ int main () {
   fileNames = getRequiredChunks (*mod);
  
   MPI::COMM_WORLD.Barrier ();
+
+  if (MPI::COMM_WORLD.Get_rank () == 0)
+    std::cout << grn << "Initialization complete." << rst << endl;
+
   for (fileNameIter=fileNames.begin (); fileNameIter!=fileNames.end(); ++fileNameIter) {
   
     exodus_file exo (*fileNameIter, mod->regionNames);    
@@ -44,6 +48,6 @@ int main () {
     mod->write ();
 
   MPI::COMM_WORLD.Barrier ();
-  //MPI::Finalize ();
+  MPI::Finalize ();
     
 }
