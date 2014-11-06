@@ -77,7 +77,7 @@ void mesh::buildConnectivityList () {
   
   size_t k = 0;
   for (size_t i=0; i<conSize; i++) {
-    
+
     int nodeIndex = connectivity[i] - 1;
     connectivityList[nodeIndex].push_back (k);            
     
@@ -109,7 +109,7 @@ void mesh::interpolate (model &mod) {
     size_t nodeNum = interpolatingSet[i] - 1;        
    
     // use du2 as a scratch array to avoid doubly visiting points.
-    if (du2[nodeNum] == 1)
+    if (du2[nodeNum] == 1) // || du1[nodeNum] == 1)
       continue;
          
     // find closest point [region specific].
@@ -796,16 +796,27 @@ double mesh::returnUpdateAbsolute (vector<vector<double>> &vec, double &valMsh,
 }
 
 double mesh::returnUpdate1d (vector<vector<double>> &vec, double &valMsh, size_t &reg, int &ind, 
-                             double &val1d) {
+                             double &val1d, vector<vector<double>> &smooth) {
    
   // Overload that returns the parameter added to a 1d background model.
   
   if (not vec.empty ()) {
-    if (abs (vec[reg][ind]) > 0.1) {
-      return val1d + vec[reg][ind];
+    if (not smooth.empty ()) {
+      //if (abs (vec[reg][ind]) > 0.000001) {
+        return ((val1d + vec[reg][ind]) * smooth[reg][ind] + valMsh * (1 - smooth[reg][ind]));
+     // } else {
+     //   return valMsh;
+     // }
+
     } else {
-      return valMsh;
+
+      if (abs (vec[reg][ind]) > 0.000001) {
+        return val1d + vec[reg][ind];
+      } else {
+        return valMsh;
+      }
     }
+
   } else {
     return valMsh;
   }
@@ -881,11 +892,11 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
         backgroundMod.prem_no220 (rad, vs1d, vp1d, rho1d);
             
       // get updated parameters.      
-      rhoNew = returnUpdate1d (mod.rho, rhoMsh, region, pnt, rho1d);
-      vsvNew = returnUpdate1d (mod.vsv, vsvMsh, region, pnt, vs1d);
-      vshNew = returnUpdate1d (mod.vsh, vshMsh, region, pnt, vs1d);
-      vpvNew = returnUpdate1d (mod.vpv, vpvMsh, region, pnt, vp1d);
-      vphNew = returnUpdate1d (mod.vph, vphMsh, region, pnt, vp1d);
+      rhoNew = returnUpdate1d (mod.rho, rhoMsh, region, pnt, rho1d, mod.smooth);
+      vsvNew = returnUpdate1d (mod.vsv, vsvMsh, region, pnt, vs1d,  mod.smooth);
+      vshNew = returnUpdate1d (mod.vsh, vshMsh, region, pnt, vs1d,  mod.smooth);
+      vpvNew = returnUpdate1d (mod.vpv, vpvMsh, region, pnt, vp1d,  mod.smooth);
+      vphNew = returnUpdate1d (mod.vph, vphMsh, region, pnt, vp1d,  mod.smooth);
           
     }
     

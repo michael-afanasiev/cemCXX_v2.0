@@ -323,7 +323,7 @@ public:
   double returnUpdateAbsolute (vector<vector<double>> &vec, double &valMsh, 
                                size_t &reg, int &pnt, vector<vector<double>> &smooth);
   double returnUpdate1d       (vector<vector<double>> &vec, double &valMsh, 
-                               size_t &reg, int &pnt, double &val1d);
+                               size_t &reg, int &pnt, double &val1d, vector<vector<double>> &smooth);
   double returnUpdate         (vector<vector<double>> &vec, double &valMsh, 
                                size_t &reg, int &pnt);
   double SBTRKTUpdate         (vector<vector<double>> &vec, double &valMsh, 

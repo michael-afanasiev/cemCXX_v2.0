@@ -9,18 +9,21 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
 
   // Class constructor for exodus fileName. Populates connectivity and book keeping arrays.
   
-  
   fileName = fname;
-//  if (MPI::COMM_WORLD.Get_rank () == 0) {
+
+//  if (direction == "interpolate") {
+//    openFileWrite ();
+//  } else {
     openFile ();
+//  }
+
+  getInfo         ();
+  allocate        ();
+  getNodeNumMap   ();
+  getConnectivity (regionNames);
+  getNodeSets     (regionNames);
   
-    getInfo         ();
-    allocate        ();
-    getNodeNumMap   ();
-    getConnectivity (regionNames);
-    getNodeSets     (regionNames);
-  
-    printMeshInfo ();
+  printMeshInfo ();
     
 //  }
   
@@ -401,7 +404,7 @@ void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
   // Initialize the iterator which will be used to copy to master connectivity array.
   vector<int>::iterator  next=connectivity.begin();
   for (size_t i=0; i<numElemBlock; i++) {
-
+  
     if (std::find (regionNames.begin (), regionNames.end (), nameDum[i]) == regionNames.end () &&
       regionNames[0] != "all")
       continue;

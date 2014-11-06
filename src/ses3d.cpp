@@ -9,9 +9,9 @@ ses3d::ses3d () {
    
   double deg = 57.5;
   angle = deg2Rad (deg);
-  xRot = 0.;
-  yRot = 1.;
-  zRot = 0.;
+  xRot = 0.0;
+  yRot = 1.0;
+  zRot = 0.0;
   
   readParameterFile   ();
   read                ();
