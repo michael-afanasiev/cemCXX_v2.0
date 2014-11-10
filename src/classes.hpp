@@ -180,7 +180,7 @@ public:
   vector<vector<double>> vsv, vsh, vpv, vph;    
   vector<vector<double>> vsi, vpi;  
   
-
+  std::string returnDirection ();
   virtual void read  (void) =0;
   virtual void write (void) =0;
   
@@ -256,7 +256,8 @@ class mesh {
   
 public:
   
-  mesh (exodus_file &);  
+  mesh (exodus_file &exo, std::string direction); 
+
   
   void initializeModel  (exodus_file &);
   void initializeKernel (exodus_file &);
@@ -459,7 +460,7 @@ protected:
 public:
   
   // Constructor.
-  exodus_file   (std::string, std::vector<std::string>);
+  exodus_file   (std::string, std::vector<std::string>, std::string);
   ~exodus_file  ();
   void writeNew         (std::string fileName, mesh &msh, std::vector<double> &par);
   

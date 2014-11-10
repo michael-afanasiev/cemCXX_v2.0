@@ -21,8 +21,8 @@ int main () {
 
   for (fileNameIter=fileNames.begin (); fileNameIter!=fileNames.end(); ++fileNameIter) {
   
-    exodus_file exo (*fileNameIter, mod->regionNames);    
-    mesh msh            (exo);
+    exodus_file exo (*fileNameIter, mod->regionNames, mod->returnDirection ());    
+    mesh msh            (exo, mod->returnDirection ());
     msh.initializeModel (exo);
 
     if (mod->direction == "interpolate") {

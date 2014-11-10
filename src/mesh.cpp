@@ -2,7 +2,7 @@
 
 using namespace std;
 
-mesh::mesh (exodus_file &eFile) {
+mesh::mesh (exodus_file &eFile, std::string direction) {
   
   myRank    = MPI::COMM_WORLD.Get_rank ();
   worldSize = MPI::COMM_WORLD.Get_size ();
@@ -14,7 +14,9 @@ mesh::mesh (exodus_file &eFile) {
   nodeNumMap       = eFile.returnNodeNumMap   ();
   numNodes         = eFile.numNodes;
   interpolatingSet = eFile.returnInterpolatingSet ();
-  buildConnectivityList ();
+
+  if (direction == "extract")
+    buildConnectivityList ();
     
 }
 

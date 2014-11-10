@@ -2,6 +2,17 @@
 
 using namespace std;
 
+std::string model::returnDirection () {
+
+/*
+  Function returns the current direction of interpolation from the 
+  parameter file.
+*/
+
+  return direction;
+
+}
+
 void model::findChunkCenters () {
   
 /*

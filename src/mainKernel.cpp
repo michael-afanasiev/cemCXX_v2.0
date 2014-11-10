@@ -11,8 +11,9 @@ int main () {
   specfem3d_globe modType;
   model *mod =& modType;
   
-  exodus_file exo ("/Users/michaelafanasiev/Desktop/netcdfKernel/" + exoFileName,mod->regionNames);
-  mesh msh (exo);
+  exodus_file exo ("/Users/michaelafanasiev/Desktop/netcdfKernel/" + exoFileName, mod->regionNames, 
+    mod->returnDirection ());
+  mesh msh (exo, mod->returnDirection ());
   msh.initializeKernel      (exo);
   msh.interpolateAndSmooth (*mod);
 

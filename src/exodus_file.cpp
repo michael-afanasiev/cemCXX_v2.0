@@ -5,17 +5,18 @@ using namespace std;
 
 /* PUBLIC FUNCTIONS */
 
-exodus_file::exodus_file (std::string fname, std::vector<std::string> regionNames) {
+exodus_file::exodus_file (std::string fname, std::vector<std::string> regionNames,
+                          std::string direction) {
 
   // Class constructor for exodus fileName. Populates connectivity and book keeping arrays.
   
   fileName = fname;
 
-//  if (direction == "interpolate") {
-//    openFileWrite ();
-//  } else {
+  if (direction == "interpolate") {
+    openFileWrite ();
+  } else {
     openFile ();
-//  }
+  }
 
   getInfo         ();
   allocate        ();
@@ -25,22 +26,11 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
   
   printMeshInfo ();
     
-//  }
-  
-//  broadcast1DVector (connectivity);
-//  broadcast1DVector (nodeNumMap);
-//  broadcast1DVector (interpolatingSet);
-//  broadcastInteger  (numNodes);
-
-//  cout << "BROADCASTED: " << MPI::COMM_WORLD.Get_rank () << endl;
-  
 }
 
 exodus_file::~exodus_file () {
 
-  // Class destructor frees difficult memory.  
-//  if (MPI::COMM_WORLD.Get_rank () == 0)
-    closeFile ();
+  closeFile ();
   
 }
 
