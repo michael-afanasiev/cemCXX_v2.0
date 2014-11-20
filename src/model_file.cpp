@@ -148,6 +148,10 @@ void model::broadcastNeighbouringChunks () {
 
 void model::readParameterFile () {
   
+  /*
+    Read the default parameter file in ./mod/parameters.txt. TODO ignore comment lines.
+  */
+  
   ifstream inputFile ("./mod/parameters.txt");
   vector<string> paramName, paramValue;
   string paramNameDum, paramValueDum;
@@ -188,6 +192,9 @@ void model::readParameterFile () {
     if (paramName[i] == "taper")
       taper = paramValue[i];
     
+    if (paramName[i] == "overwrite_crust")
+      overwriteCrust = paramValue[i];
+    
   }      
   
 }
@@ -200,7 +207,9 @@ void model::resetParams () {
 
 void model::allocateArrays () {
 
-  // Allocates all the moduli arrays (for use with extraction).
+/*
+  Allocates all the moduli arrays (for use with extraction).
+*/
   
   if (interpolationType != "kernel") {
     
@@ -274,6 +283,10 @@ void model::allocateArrays () {
 
 void model::createKDtree () {
   
+  /*
+    Generate a kd-tree for the model volume.
+  */
+  
   intensivePrint ("Creating KD-trees.");
   
   trees.reserve (numModelRegions);
@@ -301,6 +314,11 @@ void model::createKDtree () {
 
 void model::rotate () {
   
+  /*
+    If a rotation angle is specified, generate the rotation matrix, and apply it to all cartesian
+  points in a model volume.
+  */
+  
   if (angle != 0.) {
     
     intensivePrint ("Rotating.");
@@ -318,7 +336,7 @@ void model::rotate () {
     
   } else {
     
-    intensivePrint ("No rotation found");
+    intensivePrint ("No rotation found.");
     
   }  
   
@@ -326,6 +344,11 @@ void model::rotate () {
 
 
 void model::findMinMaxRadius () {
+  
+  /*
+    Find the minimum and maximum radius of a model volume. The function also determines which
+  cem chunks to include. TODO move cemIncludeChunks to a seperate function.
+  */
   
   double ZERO           = 0.0;
   double NINETY         = 90.0;
@@ -380,6 +403,10 @@ void model::findMinMaxRadius () {
 
 void model::findMinMaxCartesian () {
   
+  /*
+    Finds the minimum and maximum xyz points in a certain model volume.
+  */
+  
   xMin = x[0][0];
   xMax = x[0][0];
   yMin = y[0][0];
@@ -416,18 +443,31 @@ void model::findMinMaxCartesian () {
 }
 
 bool model::checkBoundingBox (double &x, double &y, double &z) {
+  
+  /*
+    Checks the (cartesian) bounds of a model volume, and return true if a requested point is inside,
+  and false if it is outside.  
+  */
 
-  if (x   <= xMax   && x   >= xMin &&
-      y   <= yMax   && y   >= yMin &&
-      z   <= zMax   && z   >= zMin) {
+  if (x <= xMax && x >= xMin &&
+      y <= yMax && y >= yMin &&
+      z <= zMax && z >= zMin) {
+        
     return true;
+    
   } else {
+    
     return false;
+    
   }
       
 }
 
 void model::construct () {
+  
+  /*
+    Takes the elastic moduli and constructs a set of parameters from the moduli. 
+  */
       
   if (symSys.compare (0, 3, "tti") == 0) {
         

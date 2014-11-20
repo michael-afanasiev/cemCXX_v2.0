@@ -13,6 +13,7 @@ int main () {
   
   exodus_file exo ("/Users/michaelafanasiev/Desktop/netcdfKernel/" + exoFileName, mod->regionNames, 
     mod->returnDirection ());
+    
   mesh msh (exo, mod->returnDirection ());
   msh.initializeKernel      (exo);
   msh.interpolateAndSmooth (*mod);

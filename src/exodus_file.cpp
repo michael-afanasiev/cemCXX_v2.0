@@ -3,13 +3,14 @@
 
 using namespace std;
 
-/* PUBLIC FUNCTIONS */
-
 exodus_file::exodus_file (std::string fname, std::vector<std::string> regionNames,
                           std::string direction) {
 
-  // Class constructor for exodus fileName. Populates connectivity and book keeping arrays.
-  
+  /*
+  Opens an exodus file for either reading or writing (depending on interpolation direction), and 
+    populates important arrays (connectivity, nodeMap, nodeSets)
+  */
+                            
   fileName = fname;
 
   if (direction == "interpolate") {
@@ -19,7 +20,6 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
   }
 
   getInfo         ();
-  allocate        ();
   getNodeNumMap   ();
   getConnectivity (regionNames);
   getNodeSets     (regionNames);
@@ -34,10 +34,30 @@ exodus_file::~exodus_file () {
   
 }
 
+void exodus_file::openFile () {
+  
+  /*
+  Opens an exodus file, populates the idexo field, gathers basic information, and allocates
+    the appropriate arrays.
+  */
+  
+#ifdef VERBOSE
+  std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
+#endif
+  idexo = ex_open (fileName.c_str(), EX_READ, &comp_ws, &io_ws, &vers);
+  if (idexo < 0) {
+    std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
+      << std::flush << std::endl;
+    exit (EXIT_FAILURE);
+  }
+    
+}
+
 void exodus_file::openFileWrite () {
   
-  // Opens an exodus file, populates the idexo field, gathers basic information, and allocates
-  // the appropriate arrays.
+  /*
+  Opens an exodus file for read/write, populates the idexo field, gathers basic information.
+  */
  
 #ifdef VERBOSE
   std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
@@ -52,6 +72,10 @@ void exodus_file::openFileWrite () {
 }
 
 void exodus_file::writeNew (std::string fileName, mesh &msh, std::vector<double> &par) {
+  
+  /*
+  Writes a new exodus file from a single parameter and a mesh object.
+  */
   
   int nDim       = 3;
   int numNodeSet = 0;
@@ -85,30 +109,21 @@ void exodus_file::writeNew (std::string fileName, mesh &msh, std::vector<double>
   
 }
 
-void exodus_file::openFile () {
-  
-  // Opens an exodus file, populates the idexo field, gathers basic information, and allocates
-  // the appropriate arrays.
-  
-#ifdef VERBOSE
-  std::cout << "\nOpening exodus file: " << blu << fileName << rst << std::flush << std::endl;
-#endif
-  idexo = ex_open (fileName.c_str(), EX_READ, &comp_ws, &io_ws, &vers);
-  if (idexo < 0) {
-    std::cout << red << "ERROR. Fatal error opening exodus file. Exiting." 
-      << std::flush << std::endl;
-    exit (EXIT_FAILURE);
-  }
-    
-}
-
 void exodus_file::putVarParams (int &idNew) {
+  
+  /*
+  Writes a parameter (id must be provided) to a exodus file open for writing.
+  */
   
   exodusCheck (ex_put_var_param (idNew, "n", 1), "ex_put_var_param");
   
 }
 
 void exodus_file::putVarNames (int &idNew) {
+  
+  /*
+  Names the variable in a new exodus file. Really only useful for kernel visualization.
+  */
   
   const char *varNames[1];
   varNames[0] = "krn";
@@ -118,6 +133,11 @@ void exodus_file::putVarNames (int &idNew) {
 
 
 void exodus_file::getSideSets () {
+  
+  /*
+  Experimental function to extract side sets from an exodus file (output at write time). This
+    is note currently used.
+  */
 
   // Get side set ids.
   sideSetNumMap = new int [numSideSets];
@@ -197,13 +217,19 @@ void exodus_file::getSideSets () {
 
 std::vector<bool> exodus_file::returnOnSideSet () {
   
+  /*
+    Return the sideSet array from an exodus file, as a vector.
+  */
+  
   return onSideSet;
   
 }
 
 void exodus_file::closeFile () {
 
-  // Closes the exodus file.
+  /*
+  Closes the exodus file.
+  */
   
   exodusCheck (ex_close (idexo), "ex_close");
 
@@ -215,7 +241,9 @@ void exodus_file::closeFile () {
 
 void exodus_file::printMeshInfo () {
   
-  // Print mesh info.
+  /*
+  Print mesh info.
+  */
 
   #ifdef VERBOSE
   std::cout << mgn << "Number of elements:\t\t" << numElem << std::flush << std::endl;
@@ -226,10 +254,11 @@ void exodus_file::printMeshInfo () {
   
 }
 
-/* PRIVATE FUNCTIONS */
-
-// Gets mesh info.
 void exodus_file::getInfo () {
+  
+  /*
+    Gets miscellanious information on the mesh, which was stored in the exodus file.
+  */
   
   float dum1;
   char  dum2;
@@ -254,16 +283,11 @@ void exodus_file::getInfo () {
   
 }
 
-// Allocates mesh arrays.
-void exodus_file::allocate () {
-  
-  elemNumMap   = new int [numElem];
-    
-}
-
 void exodus_file::getNodeNumMap () {
 
-  // Gets the saved node number map.
+  /*
+  Gets the saved node number map.
+  */
   
   nodeNumMap.resize (numNodes);
   int *scratch = new int [numNodes];
@@ -274,9 +298,12 @@ void exodus_file::getNodeNumMap () {
 }
 
 void exodus_file::getElemNumMap () {
-
-  // Gets the saved element number map.
   
+  /*
+    Gets the saved element number map. Not really useful.
+  */
+
+  elemNumMap = new int [numElem];
   exodusCheck (ex_get_elem_num_map (idexo, elemNumMap), "ex_get_elem_num_map");
   
 }
@@ -284,7 +311,9 @@ void exodus_file::getElemNumMap () {
 
 int exodus_file::getNumElemInBlock (int &elmBlockId) {
   
-  // Returns the number of elements in an element block.
+  /*
+  Returns the number of elements in an element block.
+  */
   
   char dum1[MAX_LINE_LENGTH+1];
   int  dum2;
@@ -300,6 +329,10 @@ int exodus_file::getNumElemInBlock (int &elmBlockId) {
 
 int exodus_file::getNumNodeInSet (int &nodeSetId) {
   
+  /*
+  Get number of nodes in a nodeset.
+  */
+  
   int numNode;
   int dum1;
   
@@ -312,11 +345,20 @@ int exodus_file::getNumNodeInSet (int &nodeSetId) {
 
 std::vector<int> exodus_file::returnInterpolatingSet () {
   
+  /*
+  Returns the interpolating set as a vector. This set will be the search set for model 
+    interpolation and extraction.
+  */
+  
   return interpolatingSet;
   
 }
 
 std::vector<int> exodus_file::returnSideSetSide () {
+  
+  /*
+  Returns the saved side set array as a vector.
+  */
   
   return sideSetSide;
   
@@ -324,11 +366,20 @@ std::vector<int> exodus_file::returnSideSetSide () {
 
 std::vector<int> exodus_file::returnSideSetElem () {
   
+  /*
+  Return the elements belonging to the save side set array as a vector.
+  */
+  
   return sideSetElem;
   
 }
 
 void exodus_file::getNodeSets (std::vector<std::string> regionNames) {
+  
+  /*
+  Gets the node sets for a particular exodus file. This is the set of nodes that will be examined
+    for interpolation/extraction.
+  */
   
   // Don't bother if there are no nodesets.
   if (numNodeSets == 0) {
@@ -351,6 +402,7 @@ void exodus_file::getNodeSets (std::vector<std::string> regionNames) {
   
   // Determine which node set to get based on region name, and only read that nodeset in.    
   // Initialize the iterator which will be used to copy to master connectivity array.
+  // If 'all' is specified in the parameter file, read in all regions.
   vector<int>::iterator  next=interpolatingSet.begin();
   for (size_t i=0; i<numNodeSets; i++) {
     
@@ -375,8 +427,10 @@ void exodus_file::getNodeSets (std::vector<std::string> regionNames) {
 
 void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
   
-  // Gets the connectivty array. Merges the connectivity arrays from each block into one master
-  // connectivity array.
+  /*
+  Gets the connectivty array(s). Merges the connectivity arrays from each block into one master
+    connectivity array.
+  */
   
   // Reserve space for the array of block names.
   char *nameDum[numElemBlock];
@@ -391,7 +445,9 @@ void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
   blockNumMap = new int [numElemBlock];
   exodusCheck (ex_get_elem_blk_ids (idexo, blockNumMap), "ex_get_elem_blk_ids");
       
-  // Initialize the iterator which will be used to copy to master connectivity array.
+  // Determine which connectivity blocks to get based on region name, and only read those
+  // blocks in. Initialize the iterator which will be used to copy to master connectivity array.
+  // If 'all' is specified in the parameter file, read all regions.
   vector<int>::iterator  next=connectivity.begin();
   for (size_t i=0; i<numElemBlock; i++) {
   
@@ -417,7 +473,9 @@ void exodus_file::getConnectivity (std::vector<std::string> regionNames) {
 
 std::vector<int> exodus_file::returnConnectivity () {
 
-  // Just returns the previously found connectivity array.
+  /*
+  Just returns the previously found connectivity array.
+  */
   
   return connectivity;
   
@@ -425,7 +483,9 @@ std::vector<int> exodus_file::returnConnectivity () {
 
 std::vector<int> exodus_file::returnNodeNumMap () {
   
-  // Just returns the previously found node number map.
+  /*
+  Just returns the previously found node number map.
+  */
 
   return nodeNumMap;
   
@@ -435,34 +495,32 @@ std::vector<int> exodus_file::returnNodeNumMap () {
 void exodus_file::getXYZ (std::vector<double> &x, std::vector<double> &y, 
                           std::vector<double> &z) {
 
-  // Passes the xyz arrays from the exodus file.
-  
-//  if (MPI::COMM_WORLD.Get_rank () == 0) {
-    double *xmsh = new double [numNodes];
-    double *ymsh = new double [numNodes];
-    double *zmsh = new double [numNodes];
-  
-    exodusCheck (ex_get_coord (idexo, xmsh, ymsh, zmsh), "ex_get_coord");
-  
-    x.resize (numNodes); y.resize (numNodes); z.resize (numNodes);
-    std::copy (xmsh, xmsh+numNodes, x.begin ());
-    std::copy (ymsh, ymsh+numNodes, y.begin ());
-    std::copy (zmsh, zmsh+numNodes, z.begin ());
-  
-    delete [] xmsh;
-    delete [] ymsh;
-    delete [] zmsh;  
-//  }
-  
-//  broadcast1DVector (x);
-//  broadcast1DVector (y);
-//  broadcast1DVector (z);
+  /*
+  Passes the xyz arrays from the exodus file.
+  */
+
+  double *xmsh = new double [numNodes];
+  double *ymsh = new double [numNodes];
+  double *zmsh = new double [numNodes];
+
+  exodusCheck (ex_get_coord (idexo, xmsh, ymsh, zmsh), "ex_get_coord");
+
+  x.resize (numNodes); y.resize (numNodes); z.resize (numNodes);
+  std::copy (xmsh, xmsh+numNodes, x.begin ());
+  std::copy (ymsh, ymsh+numNodes, y.begin ());
+  std::copy (zmsh, zmsh+numNodes, z.begin ());
+
+  delete [] xmsh;
+  delete [] ymsh;
+  delete [] zmsh;  
   
 }
 
 std::vector<double> exodus_file::getVariable (std::string varName) {
 
-  // Reads a variable from the exodus file with the name 'varName'.
+  /*
+  Reads a variable from the exodus file with the name 'varName'.
+  */
 
   // get number of variables stored in file.
   int numVars;
@@ -498,12 +556,20 @@ std::vector<double> exodus_file::getVariable (std::string varName) {
 }
 
 std::string exodus_file::returnName () {
+
+  /*
+  Return the name of the exodus file.
+  */
   
   return fileName;
   
 }
 
 void exodus_file::writeVariable (std::vector<double> &var, std::string varName) {
+  
+  /*
+  Writes a variable with name 'varName' to a previously opened exodus file.
+  */
   
   // get number of variables stored in file.
   int numVars;
@@ -533,8 +599,11 @@ void exodus_file::writeVariable (std::vector<double> &var, std::string varName) 
 }
 
 
-// Checks to make sure we're doing a sane operation on the exodus file.
 void exodus_file::exodusCheck (int ier, std::string function) {
+
+  /*
+  Checks to make sure we're doing a sane operation on the exodus file.
+  */
   
   if (ier != 0) {
     std::cout << red << "Exodus library error in " << function << rst << std::flush 

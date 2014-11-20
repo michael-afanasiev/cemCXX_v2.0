@@ -191,6 +191,7 @@ public:
   std::string meshDirectory;
   std::string direction;    
   std::string taper;
+  std::string overwriteCrust;
 
 };
 
@@ -430,7 +431,6 @@ protected:
     
   // internal private functions.
   void getInfo          ();
-  void allocate         ();
   void getNodeNumMap    ();
   void getElemNumMap    ();
   void openFile         ();  

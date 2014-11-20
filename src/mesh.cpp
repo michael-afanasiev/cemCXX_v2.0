@@ -70,8 +70,10 @@ void mesh::initializeKernel (exodus_file &eFile) {
 
 void mesh::buildConnectivityList () {
   
-  // This function builds a list of elements belonging to each node. Speeds up the extraction
-  // process immensely.
+/*
+  This function builds a list of elements belonging to each node. Speeds up the extraction
+  process immensely.
+*/
   
   size_t conSize = connectivity.size ();  
   connectivityList.resize (conSize);  
@@ -111,7 +113,12 @@ void mesh::interpolate (model &mod) {
     size_t nodeNum = interpolatingSet[i] - 1;        
    
     // use du2 as a scratch array to avoid doubly visiting points.
-    if (du2[nodeNum] == 1) // || du1[nodeNum] == 1)
+    if (du2[nodeNum] == 1)
+      continue;
+    
+    // if the overwriteCrust flag is set, don't interpolate to points which have the crust
+    // flag set (du1 = 1).
+    if (overwriteCrust == "true" && du1[nodeNum] == 1)
       continue;
          
     // find closest point [region specific].
@@ -460,9 +467,10 @@ void mesh::extract (model &mod) {
             void *ind = kd_res_item_data (set);
             int point = * (int *) ind;
             
-            // size of the attached element array/
+            // size of the attached element array.
             size_t listSize = connectivityList[point].size ();
             
+            // Search through the collapsed attached element array
             for (size_t e=0; e<listSize; e++) {
               
               i0 = connectivityList[point][e] * numNodePerElem + 0;
@@ -545,8 +553,9 @@ void mesh::extract (model &mod) {
           if (not found)
             searchRadius = searchRadius + searchRadius * TEN_PERCENT;     
 
+          // If we're careening out of control (i.e., not finding the enclosing tet), report
+          // that something is wrong.
           printExplodingSearchRad (searchRadius, xTarget, yTarget, zTarget);
-
 
           // If we actually have a results set, let's free the memory needed for the next pass.
           if (kd_res_size (set) != 0)
@@ -580,8 +589,10 @@ void mesh::printExplodingSearchRad (double &searchRadius, double &xT, double &yT
 
 void mesh::getSideSets () {
   
-  // This function creates side sets for the mesh. You can define your own side set condition with
-  // if statements below.
+/*
+  This function creates side sets for the mesh. You can define your own side set condition with
+  if statements below.
+*/
   
   size_t connectivitySize = connectivity.size ();
   
@@ -612,8 +623,10 @@ void mesh::getSideSets () {
 void mesh::checkAndProject (std::vector<double> &v0, std::vector<double> &v1, 
                             std::vector<double> &v2, std::vector<double> &p0) {
                               
-  // Determines the distance from an arbitrary point which may be just outside the mesh. Then, this
-  // point is modified and projected onto the border of the mesh.
+/*
+  Determines the distance from an arbitrary point which may be just outside the mesh. Then, this
+  point is modified and projected onto the border of the mesh.
+*/
                               
   if (abs (p0[0]-xMin) < CLOSE)
     p0[0] = p0[0] + CLOSE;
@@ -670,6 +683,7 @@ void mesh::interpolateTopography (discontinuity &topo) {
 
   // Number of nodes in mesh chunk.
   size_t setSize = x.size ();    
+  
 #pragma omp parallel for
   for (size_t i=0; i<setSize; i++) {
       
@@ -751,10 +765,11 @@ void mesh::interpolateTopography (discontinuity &topo) {
 double mesh::returnUpdate (vector<vector<double>> &vec, double &valMsh, 
                            size_t &reg, int &ind) {
                              
-  // Small function that checks for the existance of a vector, and returns its value at [reg][pnt],
-  // in addition to additing the value to vslMsh. If the vector does not exist, it just returns 
-  // valMsh. This is the workhorse function tti model updates.
-  //
+/*
+  Small function that checks for the existance of a vector, and returns its value at [reg][pnt],
+  in addition to additing the value to vslMsh. If the vector does not exist, it just returns 
+  valMsh. This is the workhorse function tti model updates.
+*/
   
   if (not vec.empty ()) {
     return vec[reg][ind] + valMsh;
@@ -767,9 +782,11 @@ double mesh::returnUpdate (vector<vector<double>> &vec, double &valMsh,
 double mesh::SBTRKTUpdate (vector<vector<double>> &vec, double &valMsh, 
                            size_t &reg, int &ind) {
                              
-  // Small function that checks for the existance of a vector, and returns its value at [reg][pnt],
-  // in addition to additing the value to vslMsh. If the vector does not exist, it just returns 
-  // valMsh. This is the workhorse function tti model updates.
+/*
+  Small function that checks for the existance of a vector, and returns its value at [reg][pnt],
+  in addition to additing the value to vslMsh. If the vector does not exist, it just returns 
+  valMsh. This is the workhorse function tti model updates.
+*/
                              
   if (not vec.empty ()) {
     return valMsh - vec[reg][ind];
@@ -782,8 +799,11 @@ double mesh::SBTRKTUpdate (vector<vector<double>> &vec, double &valMsh,
 double mesh::returnUpdateAbsolute (vector<vector<double>> &vec, double &valMsh, 
                                    size_t &reg, int &ind, vector<vector<double>> &smooth) {
   
-  // Small function that checks for the existance of a vector, and returns its value at [reg][pnt].
-  // If it does not exist, it returns the default (in this case valmsh).
+/*
+  Small function that checks for the existance of a vector, and returns its value at [reg][pnt].
+  If it does not exist, it returns the default (in this case valmsh). Also, it looks for an
+  included smoothing array, and will taper the model into the background if available.
+*/
   
   if (not vec.empty ()) {
     if (not smooth.empty ()) {
@@ -800,16 +820,14 @@ double mesh::returnUpdateAbsolute (vector<vector<double>> &vec, double &valMsh,
 double mesh::returnUpdate1d (vector<vector<double>> &vec, double &valMsh, size_t &reg, int &ind, 
                              double &val1d, vector<vector<double>> &smooth) {
    
-  // Overload that returns the parameter added to a 1d background model.
+/*
+  Overload that returns the parameter added to a 1d background model.
+*/
   
   if (not vec.empty ()) {
     if (not smooth.empty ()) {
-      //if (abs (vec[reg][ind]) > 0.000001) {
-        return ((val1d + vec[reg][ind]) * smooth[reg][ind] + valMsh * (1 - smooth[reg][ind]));
-     // } else {
-     //   return valMsh;
-     // }
-
+      return ((val1d + vec[reg][ind]) * smooth[reg][ind] + valMsh * (1 - smooth[reg][ind]));
+      
     } else {
 
       if (abs (vec[reg][ind]) > 0.000001) {
