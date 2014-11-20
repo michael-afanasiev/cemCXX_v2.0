@@ -97,7 +97,7 @@ class model {
   
   friend class mesh;
   friend class kernel;
-
+  
 protected:
   
   size_t myRank;
@@ -192,6 +192,7 @@ public:
   std::string direction;    
   std::string taper;
   std::string overwriteCrust;
+  std::string interpolateAll;
 
 };
 

@@ -118,7 +118,7 @@ void mesh::interpolate (model &mod) {
     
     // if the overwriteCrust flag is set, don't interpolate to points which have the crust
     // flag set (du1 = 1).
-    if (mod.overwriteCrust == "true" && du1[nodeNum] == 1)
+    if (mod.overwriteCrust == "false" && du1[nodeNum] == 1)
       continue;
          
     // find closest point [region specific].
@@ -126,6 +126,10 @@ void mesh::interpolate (model &mod) {
 
       bool inRegion = checkInterpolatingRegion (x[nodeNum], y[nodeNum], z[nodeNum], 
                                                 mod.minRadRegion[r], mod.maxRadRegion[r]);
+
+      // If we're manipulating the entire mesh, we don't care whether we're in a region.      
+      if (mod.interpolateAll == "true")
+        inRegion = true;
                                                 
       if (inRegion) {
       
@@ -891,25 +895,46 @@ elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z,
     double vshNew = vshMsh;
     double vpvNew = vpvMsh;
     double vphNew = vphMsh;
+    
+    if (mod.interpolationType == "replace_with_1d_background") {
+      
+      double etaAniso;
+      background_models backgroundMod;
+      
+      double rad = getRadius (x, y, z);
+      if (mod.onedBackground == "prem") {
+        backgroundMod.prem (rad, vsvNew, vshNew, vpvNew, vphNew, rhoNew, etaAniso);
+      } else {
+        error ("One dimensional background not currently supported for a full mesh swap.");
+      }
+        
+    }
   
     if (mod.interpolationType == "add_to_1d_background") {
     
       // need radius for 1d background.
       double rad = getRadius (x, y, z);
-      // if (abs (rad - RAD_400) < TINY && radMin < RAD_400)
-      //   rad = 5970.5;
     
       // get 1d background model.
       double vs1d, vp1d, rho1d;
       background_models backgroundMod;
-      if (mod.onedBackground == "europe_model")
+      if (mod.onedBackground == "europe_model") {
+        
         backgroundMod.eumod (rad, vs1d, vp1d, rho1d);
-
-      if (mod.onedBackground == "eumod_vpPrem_vsPremLt670")
+        
+      } else if (mod.onedBackground == "eumod_vpPrem_vsPremLt670") {
+        
         backgroundMod.eumod_vpPrem_vsPremLt670 (rad, vs1d, vp1d, rho1d);
     
-      if (mod.onedBackground == "prem_no220")
+      } else if (mod.onedBackground == "prem_no220") {
+        
         backgroundMod.prem_no220 (rad, vs1d, vp1d, rho1d);
+        
+      } else {
+        
+        error ("1D model not implemented yet.");
+        
+      }
             
       // get updated parameters.      
       rhoNew = returnUpdate1d (mod.rho, rhoMsh, region, pnt, rho1d, mod.smooth);

@@ -195,6 +195,9 @@ void model::readParameterFile () {
     if (paramName[i] == "overwrite_crust")
       overwriteCrust = paramValue[i];
     
+    if (paramName[i] == "interpolate_all")
+      interpolateAll = paramValue[i];
+    
   }      
   
 }

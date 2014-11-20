@@ -31,12 +31,22 @@ void rotation_matrix::rotate (double &xOld, double &yOld, double &zOld,
 
 std::vector<string> getRequiredChunks (model &mod) {
   
-  std::set<std::string>::iterator colIter;
-  std::set<std::string>::iterator lonIter;
+  /*
+    This function determines, from the spatial range of a model file, which of the exodus chunks
+  should be inspected. For consistentcy, this should probably be moved to model_file.cpp or
+  something like that.
+  */
   
+  // Set up access to naming arrays.
+  std::set<std::string>::iterator colIter;
+  std::set<std::string>::iterator lonIter;  
   std::vector<std::string> modelChunks;
   
-  if (mod.direction == "interpolate_topography") {
+  // This special little flag tells the functions to grab a specific set of mesh chunks if we're
+  // trying to do something special (i.e. interpolate topography, or interpolate PREM). Basically,
+  // if we want to operate on a section of mesh that isn't defined by some outside model file, we
+  // define that section here.
+  if (mod.interpolateAll == "true" || mod.direction == "interpolate_topography") {
     
     mod.colChunks.clear (); mod.lonChunks.clear (); mod.rMin.clear ();
     
@@ -48,10 +58,16 @@ std::vector<string> getRequiredChunks (model &mod) {
     mod.lonChunks.insert ("lon180-270.");
     mod.lonChunks.insert ("lon270-360.");
     
-    mod.rMin.push_back (R_EARTH-100.);
+    if (mod.direction == "interpolate_topography") {
+      mod.rMin.push_back (R_EARTH-100.);
+    } else {
+      mod.rMin.push_back (0.);
+    }
     
-  }
-  
+  } 
+    
+  // Look through the directory where the exodus files are stored, and add all the ones which lie 
+  // within the specified model region to a master list. Fail if exodus files aren't found.
   DIR *dp = opendir (mod.meshDirectory.c_str ());
   struct dirent *dirp;
   if (dp == NULL)
@@ -90,7 +106,13 @@ bool testInsideTet (vector<double> &v0,
                     vector<double> &v3,
                     vector<double> &p0,
                     double &l1, double &l2, double &l3, double &l4) {
-                      
+                                            
+  /*
+    This function is one of the workhorses of the extraction routine. Given the 4 vectors of a 
+  tetrahedra (v0-v3), and a point (p0), it performs the barycentric coordinate transform on the 
+  tetrahedra, and returns a boolean describing whether the interior condition (point inside tet) is
+  satisfied.
+  */
                       
   double x1 = v0[0]; double y1 = v0[1]; double z1 = v0[2];
   double x2 = v1[0]; double y2 = v1[1]; double z2 = v1[2];
@@ -142,7 +164,9 @@ std::vector<double> getNormalVector (std::vector<double> &A,
                                      std::vector<double> &B,
                                      std::vector<double> &C) {
                                       
-   // Gets the normal vector to 3 points in 3-dimensions.
+  /*
+     Returns the normal vector to a plane defined by 3 points in 3-dimensions.
+  */
                                       
   std::vector<double> AB;
   std::vector<double> AC;
@@ -176,11 +200,20 @@ std::vector<double> getNormalVector (std::vector<double> &A,
 double interpolateTet (std::vector<double> &vec, size_t &n0,  size_t &n1, size_t &n2, size_t &n3,
                        double &l0, double &l1, double &l2, double &l3) {
                          
+   /*
+     Performs the linear interpolation over the tetrahedra, using weighting constants that were
+   presumably found through testInsideTet.
+   */
+                         
   return l0 * vec[n0] + l1 * vec[n1] + l2 * vec[n2] + l3 * vec[n3];                         
                          
 }
 
 void xyz2ColLonRad (double &x, double &y, double &z, double &col, double &lon, double &rad) {
+  
+  /*
+    Function to convert cartesian to spherical coordinates.
+  */
 
   rad = getRadius (x, y, z);
   
