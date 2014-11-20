@@ -118,7 +118,7 @@ void mesh::interpolate (model &mod) {
     
     // if the overwriteCrust flag is set, don't interpolate to points which have the crust
     // flag set (du1 = 1).
-    if (overwriteCrust == "true" && du1[nodeNum] == 1)
+    if (mod.overwriteCrust == "true" && du1[nodeNum] == 1)
       continue;
          
     // find closest point [region specific].

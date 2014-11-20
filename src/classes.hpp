@@ -493,6 +493,8 @@ public:
   void eumod                    (double &, double &, double &, double &);
   void prem_no220               (double &, double &, double &, double &);
   void eumod_vpPrem_vsPremLt670 (double &, double &, double &, double &);
+  void prem                     (double &rad, double &vsv, double &vsh, double &vpv, 
+                                 double &vph, double &rho, double &eta_aniso);
           
 };
 
