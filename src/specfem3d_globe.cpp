@@ -49,6 +49,12 @@ void specfem3d_globe::adjustRegions () {
         if (radLoc > R_EARTH)
           radLoc = R_EARTH - TINY;
 
+        if (abs (radLoc - RAD_400) < CLOSE)
+          radLoc = RAD_400 - CLOSE;
+
+        if (abs (radLoc - RAD_670) < CLOSE)
+          radLoc = RAD_670 - CLOSE;
+
       } else if (r == 1) {
 
         if (radLoc >= RAD_CMB)
@@ -141,6 +147,8 @@ void specfem3d_globe::write () {
     writeParamNetcdfSerial (vsh[0], "vsh_reg01.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vsv[0], "vsv_reg01.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (rho[0], "rho_reg01.proc" + myRankString + ".nc");
+
+    MPI::COMM_WORLD.Barrier ();
     
     writeParamNetcdfSerial (vph[1], "vph_reg02.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vpv[1], "vpv_reg02.proc" + myRankString + ".nc");
@@ -148,12 +156,14 @@ void specfem3d_globe::write () {
     writeParamNetcdfSerial (vsv[1], "vsv_reg02.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (rho[1], "rho_reg02.proc" + myRankString + ".nc");
     
+    MPI::COMM_WORLD.Barrier ();
     writeParamNetcdfSerial (vph[2], "vph_reg03.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vpv[2], "vpv_reg03.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vsh[2], "vsh_reg03.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vsv[2], "vsv_reg03.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (rho[2], "rho_reg03.proc" + myRankString + ".nc");
 
+    MPI::COMM_WORLD.Barrier ();
   }
 
 }

@@ -44,9 +44,11 @@ int main () {
 
   }
 
+  cout << MPI::COMM_WORLD.Get_rank () << " done." << endl;
   if (mod->direction == "extract")
     mod->write ();
-
+  
+  cout << MPI::COMM_WORLD.Get_rank () << " DONE." << endl;
   MPI::COMM_WORLD.Barrier ();
   MPI::Finalize ();
     
