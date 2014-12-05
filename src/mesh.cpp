@@ -20,6 +20,8 @@ mesh::mesh (exodus_file &eFile, std::string direction) {
     
 }
 
+void mesh::initializeCem (exodus_file &eFile) {}
+
 void mesh::initializeModel (exodus_file &eFile) {
   
   getMinMaxDimensions();
@@ -493,7 +495,7 @@ void mesh::extract (model &mod) {
               std::vector<double> v2 = returnVector (x[n2], y[n2], z[n2]);
               std::vector<double> v3 = returnVector (x[n3], y[n3], z[n3]);
                 
-              // If we're on a side set, check and project to the actual mesh if necessary.
+              // If we're on a side set, vshcheck and project to the actual mesh if necessary.
               if (onSideSet[i0] && onSideSet[i1] && onSideSet[i3]) {
                 checkAndProject (v0, v1, v3, p0);
               } else if (onSideSet[i1] && onSideSet[i2] && onSideSet[i3]) {
@@ -718,11 +720,30 @@ void mesh::interpolateTopography (discontinuity &topo) {
     elevation to km, and then decided whether we're taking the sea level or
     or crustial surface as reference */    
     double referenceHeight;    
+    double crustRho;
+    double crustVp;
+    
+    double crustVsh = topo.vsCrust[pointCst] + aniCorrection;
+    double crustVsv = topo.vsCrust[pointCst];    
+    
     if (elv[i] <= 0) {
+      
       referenceHeight = R_EARTH;      
+      
+      // Oceanic scaling relations.
+      crustRho = 0.2547 * crustVsh + 1.979;
+      crustVp  = 1.5865 * crustVsh + 0.844;
+      
     } else {
+      
       referenceHeight = R_EARTH + elv[i];
-    }    
+      
+      // Continental scaling relations.
+      crustRho = 0.2277 * crustVsh + 2.016;
+      crustVp  = 1.5399 * crustVsh + 0.840;
+      
+    } 
+       
     double radMoho = referenceHeight - topo.dpCrust[pointCst];
     
     // If we're in crust, interpolate.
@@ -732,11 +753,6 @@ void mesh::interpolateTopography (discontinuity &topo) {
       
       double vs1d, vp1d, rho1d;
       backgroundMod.prem_no220 (rad, vs1d, vp1d, rho1d);  
-      
-      double crustVsh = topo.vsCrust[pointCst];
-      double crustVsv = topo.vsCrust[pointCst] - aniCorrection;    
-      double crustRho = 0.2277 * crustVsh + 2.016;
-      double crustVp  = 1.5399 * crustVsh + 0.840;
 
       double N = crustRho * crustVsh*crustVsh;
       double L = crustRho * crustVsv*crustVsv;

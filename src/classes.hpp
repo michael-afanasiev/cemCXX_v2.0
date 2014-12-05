@@ -263,6 +263,7 @@ public:
   
   void initializeModel  (exodus_file &);
   void initializeKernel (exodus_file &);
+  void initializeCem    (exodus_file &);
   
   void dump                  (exodus_file &);
   void dumpKernel            (exodus_file &);
