@@ -13,7 +13,7 @@ exodus_file::exodus_file (std::string fname, std::vector<std::string> regionName
                             
   fileName = fname;
 
-  if (direction == "interpolate") {
+  if (direction == "interpolate" || direction == "interpolate_topography") {
     openFileWrite ();
   } else {
     openFile ();

@@ -57,6 +57,11 @@ void ses3d::read () {
       readFile (vsv, "vsv");
       readFile (vsh, "vsh");                
   
+    } else if (symSys == "tti_noRho_noVp") {
+      
+      readFile (vsv, "vsv");
+      readFile (vsh, "vsh");
+      
     } else if (symSys == "tti_isoVp") {
 
       readFile (rho, "rho");

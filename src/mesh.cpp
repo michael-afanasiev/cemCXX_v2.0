@@ -722,25 +722,33 @@ void mesh::interpolateTopography (discontinuity &topo) {
     double referenceHeight;    
     double crustRho;
     double crustVp;
+
+    /* Ani corrections (arbitrary). */
+    double ANI_SLOPE = 0.0011;
+    double R_ANI     = 6201.;
+
+    double isoVs            = topo.vsCrust[pointCst];
+    double aniCorrectionVsv = (1/3.) * (ANI_SLOPE * (rad - R_ANI));
+    double aniCorrectionVsh = (2/3.) * (ANI_SLOPE * (rad - R_ANI));
     
-    double crustVsh = topo.vsCrust[pointCst] + aniCorrection;
-    double crustVsv = topo.vsCrust[pointCst];    
+    double crustVsh = topo.vsCrust[pointCst] + aniCorrectionVsh;
+    double crustVsv = topo.vsCrust[pointCst] - aniCorrectionVsv;    
     
     if (elv[i] <= 0) {
       
       referenceHeight = R_EARTH;      
       
       // Oceanic scaling relations.
-      crustRho = 0.2547 * crustVsh + 1.979;
-      crustVp  = 1.5865 * crustVsh + 0.844;
+      crustRho = 0.2547 * isoVs + 1.979;
+      crustVp  = 1.5865 * isoVs + 0.844;
       
     } else {
       
       referenceHeight = R_EARTH + elv[i];
       
       // Continental scaling relations.
-      crustRho = 0.2277 * crustVsh + 2.016;
-      crustVp  = 1.5399 * crustVsh + 0.840;
+      crustRho = 0.2277 * isoVs + 2.016;
+      crustVp  = 1.5399 * isoVs + 0.840;
       
     } 
        
