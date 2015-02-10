@@ -7,10 +7,10 @@ ses3d::ses3d () {
   myRank    = MPI::COMM_WORLD.Get_rank ();
   worldSize = MPI::COMM_WORLD.Get_size ();
    
-  double deg = 57.5;
+  double deg = 0.0;
   angle = deg2Rad (deg);
-  xRot = 0.0;
-  yRot = 1.0;
+  xRot = 0.766044443118978;
+  yRot = 0.6427876096865393;
   zRot = 0.0;
   
   readParameterFile   ();
@@ -200,7 +200,12 @@ void ses3d::readFile (vector<vector<double>> &vec, string type) {
       }
       
       if (l > 1) {
-        dummy[r-1].push_back (stof (line));
+        try {
+          dummy[r-1].push_back (stof (line));
+        } catch (const std::out_of_range &e) {
+          cout << "Setting: " << line << " to zero." << endl;
+          dummy[r-1].push_back (0.0);
+        }
         intr++;
         l++;
       }  

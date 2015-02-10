@@ -154,8 +154,7 @@ protected:
   std::vector<size_t> neighbourArray;
 
   // Center of box.
-  std::vector<double> xCtr, yCtr, zCtr;  
- 
+  std::vector<double> xCtr, yCtr, zCtr; 
 
   // Internal functions.
   void rotate                      ();
@@ -317,7 +316,10 @@ public:
     
   // Keep track of side sets.
   std::vector<bool> onSideSet;
-    
+  
+  // Bool determining whether kernel is in range of global mesh.
+  std::vector<bool> kernelInRange;
+  
   // misc. mesh details.
   const size_t numNodePerElem=4;
   size_t numNodes;
@@ -342,6 +344,8 @@ public:
   
   void checkAndProject (std::vector<double> &v0, std::vector<double> &v1,
                         std::vector<double> &v2, std::vector<double> &p0);
+
+  void findKernelInRange (model &mod);
   
 };
 

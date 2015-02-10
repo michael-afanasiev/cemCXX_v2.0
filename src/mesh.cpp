@@ -57,9 +57,11 @@ void mesh::initializeModel (exodus_file &eFile) {
 }
 
 void mesh::initializeKernel (exodus_file &eFile) {
+
+  getMinMaxDimensions ();
   
-  du1.resize (numNodes);
-  krn.resize (numNodes);
+  du1.resize (interpolatingSet.size ());
+  krn.resize (interpolatingSet.size ());
   
   std::fill (du1.begin (), du1.end (), 0);
   
@@ -102,13 +104,15 @@ void mesh::interpolate (model &mod) {
   int percent    = setSize / 100.;
   int pCount     = 0;
   int pIter      = 0;
+
+  double discretization = 50.;
   
   // Supress unused variable warnings.
   (void) pCount;
   (void) pIter;
   (void) percent;  
   
-#pragma omp parallel for firstprivate (pCount, pIter)
+#pragma omp parallel for schedule (guided) firstprivate (pCount, pIter)
   for (size_t i=0; i<setSize; i++) {
 
     // extract node number.
@@ -139,7 +143,16 @@ void mesh::interpolate (model &mod) {
         void *ind  = kd_res_item_data (set);
         int point  = * (int *) ind;
         kd_res_free (set); 
-      
+
+        // Get the distance from model point to mesh point -- use this to 
+        // constrict interpolation to the correct region.
+        double xDif = x[nodeNum] - mod.x[r][point];
+        double yDif = y[nodeNum] - mod.y[r][point];
+        double zDif = z[nodeNum] - mod.z[r][point];
+        double dist = getRadius (xDif, yDif, zDif);
+        if (dist > 2. * discretization)
+          continue;
+
         elasticTensor moduli = breakdown (mod, x[nodeNum], y[nodeNum], z[nodeNum], 
                                           r, nodeNum, point);
 
@@ -183,17 +196,55 @@ void mesh::interpolate (model &mod) {
   
 }
 
+void mesh::findKernelInRange (model &mod) {
+
+
+  intensivePrint ("Interpolating.");
+  size_t setSize = interpolatingSet.size ();
+  size_t modSize = mod.originalSize;
+  kernelInRange.resize (setSize);
+
+  for (size_t i=0; i<setSize; i++) {
+
+    size_t nodeNum = interpolatingSet[i] - 1;
+
+    double xTarget = x[nodeNum];
+    double yTarget = y[nodeNum];
+    double zTarget = z[nodeNum];
+
+    double rad = getRadius (xTarget, yTarget, zTarget);
+
+    if (xTarget <= mod.xMax && xTarget >= mod.xMin &&
+        yTarget <= mod.yMax && yTarget >= mod.yMin &&
+        zTarget <= mod.zMax && zTarget >= mod.zMin &&
+        rad     <= mod.rMax[0] && rad  >= mod.rMin[0]) {     
+      
+      kernelInRange[nodeNum] = true;
+    } else {
+      kernelInRange[nodeNum] = false;
+    }
+    
+  }
+
+  MPI::COMM_WORLD.Barrier ();
+  donePrint ();
+
+}
+
 void mesh::interpolateAndSmooth (model &mod) {
     
   intensivePrint ("Interpolating.");
   size_t setSize = interpolatingSet.size ();
   int percent    = (setSize) / 100.;
   
-  struct {
+  struct hold {
     double distance;
     int    rank;
-  } distanceIn[numNodes], distanceOut[numNodes];
-    
+  };
+
+  hold *distanceIn = new hold  [setSize];
+  hold *distanceOut = new hold [setSize];
+
   int pCount          = 0;
   int pIter           = 0;  
   double searchRad    = 100;  
@@ -204,15 +255,25 @@ void mesh::interpolateAndSmooth (model &mod) {
   (void) pCount;
   (void) pIter;
   (void) percent;
-  
+ 
+#pragma omp parallel for firstprivate (pCount, pIter)
   for (size_t i=0; i<setSize; i++) {
 
     // extract node number.
-    size_t nodeNum = interpolatingSet[i] - 1;        
+    size_t nodeNum = interpolatingSet[i] - 1;       
 
     // use du1 as a scratch array to avoid doubly visiting points.
-    if (du1[nodeNum] == 1)
+    if (du1[nodeNum] == 1) 
       continue;
+
+    if (! kernelInRange[nodeNum]) {
+
+      distanceIn[nodeNum].distance = 1e10;
+      distanceIn[nodeNum].rank     = myRank;
+      interpParam[nodeNum]         = 0.;
+      continue;
+
+    }
          
     // find closest point [region specific].
     for (size_t r=0; r<mod.numModelRegions; r++) {
@@ -287,7 +348,7 @@ void mesh::interpolateAndSmooth (model &mod) {
   }
   
   donePrint ();
-  
+ 
   // Figure out where the minimum distance is.
   MPI::COMM_WORLD.Allreduce (distanceIn, distanceOut, setSize, MPI_DOUBLE_INT, MPI_MINLOC);  
   
@@ -305,8 +366,13 @@ void mesh::interpolateAndSmooth (model &mod) {
     MPI::COMM_WORLD.Reduce (bufValue,     bufValue, setSize, MPI_DOUBLE, MPI_SUM, 0);
   }
   
-  std::copy (bufValue, bufValue+setSize, krn.begin ());  
-  
+  std::copy (bufValue, bufValue+setSize, krn.begin ()); 
+
+  delete [] interpParam;
+  delete [] bufValue;
+  delete [] distanceIn;
+  delete [] distanceOut;
+
   // intensivePrint ("Averaging.");
   // size_t connectivitySize = connectivity.size ();
   // for (size_t i=0; i<connectivitySize; i+=4) {
@@ -535,6 +601,7 @@ void mesh::extract (model &mod) {
                   mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
+//                  mod.rho[r][i] = getRadius(p0[0], p0[1], p0[2]); 
                   
                 } else if (mod.interpolationType == "kernel") {
                   
@@ -690,7 +757,7 @@ void mesh::interpolateTopography (discontinuity &topo) {
   // Number of nodes in mesh chunk.
   size_t setSize = x.size ();    
   
-#pragma omp parallel for
+#pragma omp parallel for schedule (guided)
   for (size_t i=0; i<setSize; i++) {
       
     double col, lon, rad;            
@@ -899,7 +966,6 @@ void mesh::dump (exodus_file &eFile) {
   eFile.writeVariable (du1, "du1");
   
 }
-
 
 elasticTensor mesh::breakdown (model &mod, double &x, double &y, double &z, 
                                size_t &region, size_t &mshInd, int &pnt) {

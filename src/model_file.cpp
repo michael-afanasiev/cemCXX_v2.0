@@ -44,6 +44,7 @@ void model::findChunkCenters () {
   xCtr[myRank] = xAvg / totParam;
   yCtr[myRank] = yAvg / totParam;
   zCtr[myRank] = zAvg / totParam;
+
     
 }
 
@@ -76,20 +77,31 @@ void model::findNeighbouringChunks () {
     }
     
   }
-  
+
+  double prevDist = 0.;
   while (neighbourArray.size () < maxNeighbours) {
     
     size_t ind = getSmallestIndex (distArray);
+
+    // Sometimes, if a processor is on a corner, there's actually
+    // only seven neighbours. This deals with that.
+    if (neighbourArray.size () == (maxNeighbours-1))
+      if (abs (distArray[ind] - prevDist) > 1000.) 
+        break;
+
     neighbourArray.push_back (ind);
+    prevDist       = distArray[ind];
+
     distArray[ind] = largeDistance;
-    
+
     if (neighbourArray.size () == (worldSize - 1))
       break;
     
   }
   
   std::sort (neighbourArray.begin (), neighbourArray.end ());
-  
+
+
 }
 
 void model::broadcastNeighbouringChunks () {
@@ -106,43 +118,50 @@ void model::broadcastNeighbouringChunks () {
   int Z_TAG            = 2;
   int KRN_TAG          = 3;
   originalSize         = numBroadcast;
-  
+
   // Allocations.
-  double *recX   = new double [numBroadcast];
-  double *recY   = new double [numBroadcast];
-  double *recZ   = new double [numBroadcast];
-  double *recKrn = new double [numBroadcast];
+  double *recX   = new double [numBroadcast*numNeighbours];
+  double *recY   = new double [numBroadcast*numNeighbours];
+  double *recZ   = new double [numBroadcast*numNeighbours];
+  double *recKrn = new double [numBroadcast*numNeighbours];
   
   // For all neighbours previously found, broadcast full arrays to each processor.
+  // Set up wait_receive.
   for (size_t i=0; i<numNeighbours; i++) {
-  
-    MPI::COMM_WORLD.Isend (&x[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], X_TAG);
-    MPI::COMM_WORLD.Isend (&y[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], Y_TAG);
-    MPI::COMM_WORLD.Isend (&z[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], Z_TAG);
-    MPI::COMM_WORLD.Isend (&vsh[0][0], numBroadcast, MPI::DOUBLE, neighbourArray[i], KRN_TAG);
-    
-  }
-  
-  for (size_t i=0; i<numNeighbours; i++) {
-    
-    MPI::COMM_WORLD.Recv (recX,   numBroadcast, MPI::DOUBLE, neighbourArray[i], X_TAG);
-    MPI::COMM_WORLD.Recv (recY,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Y_TAG);
-    MPI::COMM_WORLD.Recv (recZ,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Z_TAG);
-    MPI::COMM_WORLD.Recv (recKrn, numBroadcast, MPI::DOUBLE, neighbourArray[i], KRN_TAG);
 
-    x[0].insert   (x[0].end (),   recX,   recX+numBroadcast);
-    y[0].insert   (y[0].end (),   recY,   recY+numBroadcast);
-    z[0].insert   (z[0].end (),   recZ,   recZ+numBroadcast);
-    vsh[0].insert (vsh[0].end (), recKrn, recKrn+numBroadcast);
-    
+    MPI::COMM_WORLD.Irecv (recX+i*numBroadcast,   numBroadcast, MPI::DOUBLE, neighbourArray[i], X_TAG);
+    MPI::COMM_WORLD.Irecv (recY+i*numBroadcast,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Y_TAG);
+    MPI::COMM_WORLD.Irecv (recZ+i*numBroadcast,   numBroadcast, MPI::DOUBLE, neighbourArray[i], Z_TAG);
+    MPI::COMM_WORLD.Irecv (recKrn+i*numBroadcast, numBroadcast, MPI::DOUBLE, neighbourArray[i], KRN_TAG);
+
+  }
+
+  // Set up blocking send.
+  for (size_t i=0; i<numNeighbours; i++) {
+
+    MPI::COMM_WORLD.Send (&x[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], X_TAG);
+    MPI::COMM_WORLD.Send (&y[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], Y_TAG);
+    MPI::COMM_WORLD.Send (&z[0][0],   numBroadcast, MPI::DOUBLE, neighbourArray[i], Z_TAG);
+    MPI::COMM_WORLD.Send (&vsh[0][0], numBroadcast, MPI::DOUBLE, neighbourArray[i], KRN_TAG);
+
     MPI::COMM_WORLD.Barrier ();
 
   }
-    
+
+  // Append to original array.
+  x[0].insert   (x[0].end (),   recX,   recX+numBroadcast*numNeighbours);
+  y[0].insert   (y[0].end (),   recY,   recY+numBroadcast*numNeighbours);
+  z[0].insert   (z[0].end (),   recZ,   recZ+numBroadcast*numNeighbours);
+  vsh[0].insert (vsh[0].end (), recKrn, recKrn+numBroadcast*numNeighbours);
+
+  // Delete receive buffers.
   delete [] recX;
   delete [] recY;
   delete [] recZ;
   delete [] recKrn;
+
+  if (myRank == 0)
+    cout << "New array size: " << x[0].size () << endl;
   
 }
 

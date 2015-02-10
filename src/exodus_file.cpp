@@ -280,7 +280,7 @@ void exodus_file::getInfo () {
   numSideSets  = dumSideSets;
   numNodeSets  = dumNodeSets;
   numElemBlock = dumElemBlock;
-  
+
 }
 
 void exodus_file::getNodeNumMap () {

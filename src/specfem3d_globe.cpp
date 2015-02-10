@@ -22,11 +22,15 @@ specfem3d_globe::specfem3d_globe () {
   read                        ();
   adjustRegions               ();
   findMinMaxRadius            ();
-//  findMinMaxCartesian         ();
-//  findChunkCenters            ();
-//  findNeighbouringChunks      ();
-//  broadcastNeighbouringChunks ();
-//  createKDtree                ();
+  findMinMaxCartesian         ();
+  findChunkCenters            ();
+
+  if (interpolationType == "kernel") {
+    findNeighbouringChunks      ();
+    broadcastNeighbouringChunks ();
+    createKDtree                ();
+  }
+
   allocateArrays              ();
   
 }
@@ -105,12 +109,12 @@ void specfem3d_globe::read () {
 
   if (interpolationType == "kernel") {
 
-    vph = readParamNetcdf ("alphahKernelCrustMantle.nc");  
-    vpv = readParamNetcdf ("alphavKernelCrustMantle.nc");  
-    vsh = readParamNetcdf ("betahKernelCrustMantle.nc");
-    vsv = readParamNetcdf ("betavKernelCrustMantle.nc");  
-    eta = readParamNetcdf ("etaKernelCrustMantle.nc");
-    rho = readParamNetcdf ("rhoKernelCrustMantle.nc");
+//    vsh = readParamNetcdf ("alphahKernelCrustMantle.nc");  
+    vsh = readParamNetcdf ("alphavKernelCrustMantle.nc");  
+//    vsh = readParamNetcdf ("betahKernelCrustMantle.nc");
+//    vsv = readParamNetcdf ("betavKernelCrustMantle.nc");  
+//    eta = readParamNetcdf ("etaKernelCrustMantle.nc");
+//    rho = readParamNetcdf ("rhoKernelCrustMantle.nc");
 
   }
   
@@ -347,7 +351,7 @@ void specfem3d_globe::readCoordNetcdf (std::string fileName) {
     // Get variable.
 
     NcVar NcRadius; NcVar NcTheta; NcVar NcPhi;
-    if (interpolationType == "kernel") {
+    if (interpolationType == "kernel_old") {
       
       NcRadius = dataFile.getVar ("radius");      
       NcTheta  = dataFile.getVar ("theta");
@@ -409,7 +413,7 @@ void specfem3d_globe::readCoordNetcdf (std::string fileName) {
     // Kernels are output as spherical coordinates, while actual model parameters are output as
     // normalized cartesian co-ordinates (why?). This takes care of the conversion.
     for (size_t i=0; i<numGLLPoints; i++) {
-      if (interpolationType == "kernel") {
+      if (interpolationType == "kernel_old") {
 
         double x, y, z;
         double col = yStore[i];

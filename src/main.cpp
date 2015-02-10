@@ -6,6 +6,7 @@ int main () {
   
   MPI::Init ();
 
+//  specfem3d_globe modType;
   ses3d modType;
   model *mod =& modType;
   
@@ -13,7 +14,7 @@ int main () {
   std::vector<std::string>::iterator fileNameIter;
   
   fileNames = getRequiredChunks (*mod);
- 
+
   MPI::COMM_WORLD.Barrier ();
 
   if (MPI::COMM_WORLD.Get_rank () == 0)

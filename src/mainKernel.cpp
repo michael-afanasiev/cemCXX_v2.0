@@ -6,23 +6,36 @@ int main () {
   
   MPI::Init ();
 
-  string exoFileName = "kernelMesh.ex2";
-
+//  string exoFileName = "kernelMesh.ex2";
+ 
   specfem3d_globe modType;
   model *mod =& modType;
   
-  exodus_file exo ("/Users/michaelafanasiev/Desktop/netcdfKernel/" + exoFileName, mod->regionNames, 
-    mod->returnDirection ());
-    
-  mesh msh (exo, mod->returnDirection ());
-  msh.initializeKernel      (exo);
-  msh.interpolateAndSmooth (*mod);
+  std::vector<std::string> fileNames;
+  std::vector<std::string>::iterator fileNameIter;
+  
+  fileNames = getRequiredChunks (*mod);
 
-  if (MPI::COMM_WORLD.Get_rank () == 0)
-    exo.writeNew ("./test.ex2", msh, msh.krn);
+  MPI::COMM_WORLD.Barrier ();
+  
+  for (fileNameIter=fileNames.begin (); fileNameIter!=fileNames.end(); fileNameIter++) {
 
-  msh.extract (*mod);
-  mod->write ();
+    exodus_file exo (*fileNameIter, mod->regionNames, mod->returnDirection ());    
+    mesh msh (exo, mod->returnDirection ());
+    msh.initializeKernel      (exo);
+    msh.findKernelInRange    (*mod);
+    msh.interpolateAndSmooth (*mod);
+
+    if (MPI::COMM_WORLD.Get_rank () == 0)
+    exo.writeNew (*fileNameIter + "kernel.ex2", msh, msh.krn);
+
+  }
+
+//  if (MPI::COMM_WORLD.Get_rank () == 0)
+//    exo.writeNew ("./test.ex2", msh, msh.krn);
+
+//  msh.extract (*mod);
+// mod->write ();
 
   // the mpi finalize seems to conflict with the mpi close in the hdf5 libraries. dumb.
   // replacing it here by an MPI_BARRIER instead.
