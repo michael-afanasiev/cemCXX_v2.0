@@ -31,6 +31,7 @@ specfem3d_globe::specfem3d_globe () {
     createKDtree                ();
   }
 
+  std::cout << "HERE" << std::endl;
   allocateArrays              ();
   
 }
@@ -146,6 +147,8 @@ void specfem3d_globe::write () {
       }
     }
 
+    writeParamNetcdfSerial (vph[0], "vph_reg01.proc" + myRankString + ".nc");
+    writeParamNetcdfSerial (vpv[0], "vpv_reg01.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vph[0], "vph_reg01.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vpv[0], "vpv_reg01.proc" + myRankString + ".nc");
     writeParamNetcdfSerial (vsh[0], "vsh_reg01.proc" + myRankString + ".nc");
@@ -399,7 +402,6 @@ void specfem3d_globe::readCoordNetcdf (std::string fileName) {
     double *xStore = new double [numGLLPoints];
     double *yStore = new double [numGLLPoints];
     double *zStore = new double [numGLLPoints];
-  
     // Of course only read in with the number of processors used to create the file.
     
     if (myRank < numWroteProcs) {

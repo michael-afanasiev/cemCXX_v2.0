@@ -320,7 +320,8 @@ void model::createKDtree () {
     size_t numParams = x[r].size ();
     datKD[r].resize (numParams);
 
-#pragma omp parallel for firstprivate (r)
+//#pragma omp parallel for firstprivate (r)
+    std::cout << numParams << std::endl;
     for (size_t i=0; i<numParams; i++) {
       
       datKD[r][i] = i;

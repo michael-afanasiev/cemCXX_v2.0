@@ -373,23 +373,23 @@ void mesh::interpolateAndSmooth (model &mod) {
   delete [] distanceIn;
   delete [] distanceOut;
 
-  // intensivePrint ("Averaging.");
-  // size_t connectivitySize = connectivity.size ();
-  // for (size_t i=0; i<connectivitySize; i+=4) {
-  //
-  //   double val0 = krn[connectivity[i+0] - 1];
-  //   double val1 = krn[connectivity[i+1] - 1];
-  //   double val2 = krn[connectivity[i+2] - 1];
-  //   double val3 = krn[connectivity[i+3] - 1];
-  //
-  //   double avg = (val0 + val1 + val2 + val3) / 4.;
-  //
-  //   krn[connectivity[i+0] - 1] = avg;
-  //   krn[connectivity[i+1] - 1] = avg;
-  //   krn[connectivity[i+2] - 1] = avg;
-  //   krn[connectivity[i+3] - 1] = avg;
-  //
-  // }
+  intensivePrint ("Averaging.");
+  size_t connectivitySize = connectivity.size ();
+  for (size_t i=0; i<connectivitySize; i+=4) {
+ 
+    double val0 = krn[connectivity[i+0] - 1];
+    double val1 = krn[connectivity[i+1] - 1];
+    double val2 = krn[connectivity[i+2] - 1];
+    double val3 = krn[connectivity[i+3] - 1];
+ 
+    double avg = (val0 + val1 + val2 + val3) / 4.;
+ 
+    krn[connectivity[i+0] - 1] = avg;
+    krn[connectivity[i+1] - 1] = avg;
+    krn[connectivity[i+2] - 1] = avg;
+    krn[connectivity[i+3] - 1] = avg;
+ 
+  }
   
 }
 
