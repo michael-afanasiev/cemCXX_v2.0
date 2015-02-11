@@ -122,18 +122,19 @@ void specfem3d_globe::read () {
 }
 
 void specfem3d_globe::write () {
+    
+  /* Get name of processor */
+  stringstream myRankStringStream;
+  myRankStringStream << std::setw(6) << std::setfill ('0') << myRank;
+  string myRankString = myRankStringStream.str ();    
   
   if (interpolationType == "kernel") {
 
-    writeParamNetcdf (krn[0], "test.nc");
+    writeParamNetcdfSerial (krn[0], "kernel.proc" + myRankString + ".nc");
 
   } else {
 
     construct ();
-
-    stringstream myRankStringStream;
-    myRankStringStream << std::setw(6) << std::setfill ('0') << myRank;
-    string myRankString = myRankStringStream.str ();
 
     for (size_t r=0; r<numModelRegions; r++) {
       for (size_t i=0; i<rho[r].size (); i++) {

@@ -27,7 +27,7 @@ int main () {
     msh.interpolateAndSmooth (*mod);
 
     if (MPI::COMM_WORLD.Get_rank () == 0)
-    exo.writeNew (*fileNameIter + "kernel.ex2", msh, msh.krn);
+    exo.writeNew (*fileNameIter + ".kernel.ex2", msh, msh.krn);
 
   }
 
