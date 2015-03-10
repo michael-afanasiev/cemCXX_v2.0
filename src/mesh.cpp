@@ -601,7 +601,7 @@ void mesh::extract (model &mod) {
                   mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
-//                  mod.rho[r][i] = getRadius(p0[0], p0[1], p0[2]); 
+                  mod.rho[r][i] = interpolateTet (du1, n0, n1, n2, n3, l0, l1, l2, l3);
                   
                 } else if (mod.interpolationType == "kernel") {
                   
