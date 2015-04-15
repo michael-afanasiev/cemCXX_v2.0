@@ -130,7 +130,10 @@ void mesh::interpolate (model &mod) {
     // find closest point [region specific].
     for (size_t r=0; r<mod.numModelRegions; r++) {
 
-      bool inRegion = checkInterpolatingRegion (x[nodeNum], y[nodeNum], z[nodeNum], 
+      double xChk = x[nodeNum];
+      double yChk = y[nodeNum];
+      double zChk = z[nodeNum];
+      bool inRegion = checkInterpolatingRegion (xChk, yChk, zChk, 
                                                 mod.minRadRegion[r], mod.maxRadRegion[r]);
 
       // If we're manipulating the entire mesh, we don't care whether we're in a region.      
@@ -601,7 +604,6 @@ void mesh::extract (model &mod) {
                   mod.c56[r][i] = interpolateTet (c56, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.c66[r][i] = interpolateTet (c66, n0, n1, n2, n3, l0, l1, l2, l3); 
                   mod.rho[r][i] = interpolateTet (rho, n0, n1, n2, n3, l0, l1, l2, l3); 
-                  mod.rho[r][i] = interpolateTet (du1, n0, n1, n2, n3, l0, l1, l2, l3);
                   
                 } else if (mod.interpolationType == "kernel") {
                   
@@ -765,6 +767,7 @@ void mesh::interpolateTopography (discontinuity &topo) {
 
     // Get spherical co-ordinates for interpolation.
     xyz2ColLonRad (x[nodeNum], y[nodeNum], z[nodeNum], col, lon, rad);
+
     
     // Pull out both the topography and the crust parameters.
     kdres *setTop = kd_nearest3 (topo.elvTree,   rad2Deg (col), rad2Deg (lon), R_EARTH);        

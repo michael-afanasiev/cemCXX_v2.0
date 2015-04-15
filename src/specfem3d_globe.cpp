@@ -77,14 +77,14 @@ void specfem3d_globe::adjustRegions () {
         }
       }
 
-      if (colLoc == 0.)
-        colLoc = TINY;
-
-      if (colLoc == 180.)
-        colLoc = 180 - TINY;
-
-      if (lonLoc == 0.)
-        lonLoc = TINY;
+//      if (colLoc == 0.)
+//        colLoc = deg2Rad(*TINY);
+//
+//      if (colLoc == 180.)
+//        colLoc = 180 - deg2Rad(TINY);
+//
+//      if (lonLoc == 0.)
+//        lonLoc = deg2Rad(TINY);
         
       colLonRad2xyz (x[r][i], y[r][i], z[r][i], colLoc, lonLoc, radLoc);
 

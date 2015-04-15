@@ -6,8 +6,10 @@ int main () {
   
   MPI::Init ();
 
-//  specfem3d_globe modType;
-  ses3d modType;
+  // specfem3d_globe modType;
+  // ses3d modType;
+   terragrid modType;
+  
   model *mod =& modType;
   
   std::vector<std::string> fileNames;

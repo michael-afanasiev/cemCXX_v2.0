@@ -223,6 +223,9 @@ void xyz2ColLonRad (double &x, double &y, double &z, double &col, double &lon, d
   col = acos (z / rad);
   lon = atan2 (y, x);
 
+  if (abs(y) < TINY)
+    lon = 0.0;
+
 }
 
 

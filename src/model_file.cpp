@@ -104,6 +104,66 @@ void model::findNeighbouringChunks () {
 
 }
 
+
+void model::adjustRegions () {
+
+  for (size_t r=0; r<numModelRegions; r++) {
+
+    size_t numGLLpoints = x[r].size ();
+    for (size_t i=0; i<numGLLpoints; i++) {
+    
+      double colLoc, lonLoc, radLoc;
+      xyz2ColLonRad (x[r][i], y[r][i], z[r][i], colLoc, lonLoc, radLoc);
+      
+      if (r == 0) {
+
+        if (radLoc <= RAD_CMB) 
+          radLoc = RAD_CMB + TINY;
+        
+        if (radLoc > R_EARTH)
+          radLoc = R_EARTH - TINY;
+
+        if (abs (radLoc - RAD_400) < CLOSE)
+          radLoc = RAD_400 - CLOSE;
+
+        if (abs (radLoc - RAD_670) < CLOSE)
+          radLoc = RAD_670 - CLOSE;
+
+      } else if (r == 1) {
+
+        if (radLoc >= RAD_CMB)
+          radLoc = RAD_CMB - TINY;
+
+        if (radLoc <= RAD_ICB)
+          radLoc = RAD_ICB + TINY;
+
+      } else if (r == 2) {
+
+        if (radLoc > 1115) 
+          radLoc = 1115 - TINY;
+
+        if (radLoc < 5) {
+          radLoc = 5 + TINY;
+        }
+      }
+
+      if (colLoc == 0.)
+        colLoc = TINY;
+
+      if (colLoc == 180.)
+        colLoc = 180. - TINY;
+
+      if (lonLoc == 0.)
+        lonLoc = TINY;
+        
+      colLonRad2xyz (x[r][i], y[r][i], z[r][i], colLoc, lonLoc, radLoc);
+
+    }
+    
+  }
+
+}
+
 void model::broadcastNeighbouringChunks () {
   
 /*

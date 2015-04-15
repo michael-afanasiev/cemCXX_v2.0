@@ -170,6 +170,7 @@ protected:
   void readParameterFile           ();
   void findNeighbouringChunks      ();
   void broadcastNeighbouringChunks ();
+  void adjustRegions               ();
   
   bool checkBoundingBox (double &x, double &y, double &z);
   
@@ -211,6 +212,22 @@ protected:
   void writeParamNetcdf (vector<double> &, std::string fName);
   void writeParamNetcdfSerial (vector<double> &, std::string fName);
   vector<vector<double>> readParamNetcdf (string fName);
+
+};
+
+class terragrid: public model {
+
+public:
+    
+    terragrid();
+    
+    void read(void);
+    void write(void);
+    
+private:
+    
+    void write_file(std::vector<std::vector<double>>&, std::string);
+
 
 };
 
