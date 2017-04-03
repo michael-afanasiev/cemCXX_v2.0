@@ -7,11 +7,19 @@ ses3d::ses3d () {
   myRank    = MPI::COMM_WORLD.Get_rank ();
   worldSize = MPI::COMM_WORLD.Get_size ();
    
+// SA.
   double deg = 0.0;
   angle = deg2Rad (deg);
-  xRot = 0.766044443118978;
-  yRot = 0.6427876096865393;
+  xRot = 0.5;
+  yRot = 0.8660264037;
   zRot = 0.0;
+
+//  Europe.
+//  double deg = 57.5;
+//  angle = deg2Rad(deg);
+//  xRot = 0.0;
+//  yRot = 1.0;
+//  zRot = 0.0;
   
   readParameterFile   ();
   read                ();

@@ -216,6 +216,9 @@ void xyz2ColLonRad (double &x, double &y, double &z, double &col, double &lon, d
   */
 
   rad = getRadius (x, y, z);
+
+  if (x == 0) x = TINY;
+  if (y == 0) y = TINY;
   
   if (rad == 0)
     rad = TINY;

@@ -106,8 +106,10 @@ void mesh::interpolate (model &mod) {
   int pIter      = 0;
 
   double discretization = 50.;
+
   
   // Supress unused variable warnings.
+  //
   (void) pCount;
   (void) pIter;
   (void) percent;  
@@ -152,6 +154,7 @@ void mesh::interpolate (model &mod) {
         double dist = getRadius (xDif, yDif, zDif);
         if (dist > 2. * discretization)
           continue;
+        // ADDED BY MIKE.
 
         elasticTensor moduli = breakdown (mod, x[nodeNum], y[nodeNum], z[nodeNum], 
                                           r, nodeNum, point);
@@ -178,6 +181,17 @@ void mesh::interpolate (model &mod) {
         c56[nodeNum] = moduli.c56;
         c66[nodeNum] = moduli.c66;
         rho[nodeNum] = moduli.rho;
+    
+        // *NEW* 
+//        double col, lon, rad;
+//        xyz2ColLonRad (x[nodeNum], y[nodeNum], z[nodeNum], col, lon, rad);
+//        c11[nodeNum] = point;
+//        c12[nodeNum] = r;
+//        c13[nodeNum] = 
+//        c14[nodeNum] = 
+//        c15[nodeNum] = 
+//        c16[nodeNum] = 
+//        // *END NEW*
 
         // mark that we've visited here.
         du2[nodeNum] = 1;
@@ -680,14 +694,14 @@ void mesh::getSideSets () {
     if ((abs (radius-radMax) < 0.5) || (abs (radius-radMin) < 0.5))
       onSideSet[i] = true;
 
-    if (abs (rad2Deg (lon)) < 0.1)
-      onSideSet[i] = true;
-
-    if (abs (rad2Deg (lon) - 90.) < 0.1)
-      onSideSet[i] = true;
-
-    if (abs (rad2Deg (lon) - 180.) < 0.1)
-      onSideSet[i] = true;
+//    if (abs (rad2Deg (lon)) < 0.1)
+//      onSideSet[i] = true;
+//
+//    if (abs (rad2Deg (lon) - 90.) < 0.1)
+//      onSideSet[i] = true;
+//
+//    if (abs (rad2Deg (lon) - 180.) < 0.1)
+//      onSideSet[i] = true;
     
   }
   
@@ -902,6 +916,7 @@ double mesh::returnUpdateAbsolute (vector<vector<double>> &vec, double &valMsh,
   
   if (not vec.empty ()) {
     if (not smooth.empty ()) {
+      std::cout << "IN HERE" << std::endl;
       return vec[reg][ind] * smooth[reg][ind] + valMsh * (1 - smooth[reg][ind]);
     } else {
       return vec[reg][ind];
